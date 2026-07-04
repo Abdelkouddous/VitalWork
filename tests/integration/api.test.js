@@ -1,21 +1,20 @@
 import request from "supertest";
 import express from "express";
 import mongoose from "mongoose";
-import Employer from "../../backend/models/EmployerModel.js";
-import Job from "../../backend/models/JobModel.js";
-import JobSeeker from "../../backend/models/JobSeekerModel.js";
+import User from "../../apps/api-v1-community/models/UserModel.js";
+import Job from "../../apps/api-v1-community/models/JobModel.js";
 import { testUsers, testJobs } from "../fixtures/testData.js";
 
 // Import routes and middleware
-import jobRouter from "../../backend/routes/jobRouter.js";
-import authRouter from "../../backend/routes/authRouter.js";
-import employerRouter from "../../backend/routes/employerRouter.js";
-import jobSeekerRouter from "../../backend/routes/jobSeekerRouter.js";
-import errorHandlerMiddleware from "../../backend/middleware/errorHandlerMiddleware.js";
+import jobRouter from "../../apps/api-v1-community/routes/jobRouter.js";
+import authRouter from "../../apps/api-v1-community/routes/authRouter.js";
+import clinicRouter from "../../apps/api-v1-community/routes/clinicRouter.js";
+import healthCareProfessionalRouter from "../../apps/api-v1-community/routes/healthCareProfessionalRouter.js";
+import errorHandlerMiddleware from "../../apps/api-v1-community/middleware/errorHandlerMiddleware.js";
 import {
   authenticateUser,
   allowGuestForViewing,
-} from "../../backend/middleware/authMiddleware.js";
+} from "../../apps/api-v1-community/middleware/authMiddleware.js";
 import cookieParser from "cookie-parser";
 
 // Create test app instance
@@ -35,8 +34,8 @@ describe("API Integration Tests", () => {
     // Add routes
     app.use("/api/v1/jobs", jobRouter);
     app.use("/api/v1/auth", authRouter);
-    app.use("/api/v1/employers", authenticateUser, employerRouter);
-    app.use("/api/v1/jobseekers", jobSeekerRouter);
+    app.use("/api/v1/clinics", authenticateUser, clinicRouter);
+    app.use("/api/v1/healthcare-professionals", healthCareProfessionalRouter);
 
     // Add error handler
     app.use(errorHandlerMiddleware);
@@ -54,7 +53,7 @@ describe("API Integration Tests", () => {
       userId = registerResponse.body.user.userId;
 
       // Confirm user email directly in DB to allow login
-      await Employer.findByIdAndUpdate(userId, { isConfirmed: true });
+      await User.findByIdAndUpdate(userId, { isConfirmed: true });
 
       // 2. Login with the registered user
       const loginResponse = await request(app)
@@ -70,7 +69,7 @@ describe("API Integration Tests", () => {
 
       // 3. Verify token works by accessing protected route
       const profileResponse = await request(app)
-        .get("/api/v1/employers/current-user")
+        .get("/api/v1/clinics/current-user")
         .set("Cookie", `token=${authToken}`)
         .expect(200);
 
@@ -181,25 +180,25 @@ describe("API Integration Tests", () => {
     });
   });
 
-  describe("Job Seeker Flow", () => {
+  describe("Healthcare Professional Flow", () => {
     let jobSeekerToken;
     let jobSeekerId;
 
     beforeEach(async () => {
-      // 1. Register as job seeker
+      // 1. Register as Healthcare Professional
       const registerResponse = await request(app)
-        .post("/api/v1/jobseekers/register")
+        .post("/api/v1/healthcare-professionals/register")
         .send(testUsers.jobSeeker)
         .expect(201);
 
       jobSeekerId = registerResponse.body.userId;
 
-      // Confirm job seeker email directly in DB
-      await JobSeeker.findByIdAndUpdate(jobSeekerId, { isConfirmed: true });
+      // Confirm Healthcare Professional email directly in DB
+      await User.findByIdAndUpdate(jobSeekerId, { isConfirmed: true });
 
-      // 2. Login as job seeker
+      // 2. Login as Healthcare Professional
       const loginResponse = await request(app)
-        .post("/api/v1/jobseekers/login")
+        .post("/api/v1/healthcare-professionals/login")
         .send({
           email: testUsers.jobSeeker.email,
           password: testUsers.jobSeeker.password,
@@ -209,7 +208,7 @@ describe("API Integration Tests", () => {
       jobSeekerToken = loginResponse.body.token;
     });
 
-    it("should complete job seeker registration and profile management", async () => {
+    it("should complete Healthcare Professional registration and profile management", async () => {
       // Update profile
       const profileUpdate = {
         ...testUsers.jobSeeker,
@@ -218,7 +217,7 @@ describe("API Integration Tests", () => {
       };
 
       const updateResponse = await request(app)
-        .patch("/api/v1/jobseekers/me")
+        .patch("/api/v1/healthcare-professionals/me")
         .set("Cookie", `token=${jobSeekerToken}`)
         .send(profileUpdate)
         .expect(200);
@@ -238,7 +237,7 @@ describe("API Integration Tests", () => {
 
       // Apply for the job
       const applyResponse = await request(app)
-        .post(`/api/v1/jobseekers/apply/${jobId}`)
+        .post(`/api/v1/healthcare-professionals/apply/${jobId}`)
         .set("Cookie", `token=${jobSeekerToken}`)
         .expect(201);
 
@@ -246,16 +245,16 @@ describe("API Integration Tests", () => {
 
       // Check application status
       const applicationsResponse = await request(app)
-        .get("/api/v1/jobseekers/applications")
+        .get("/api/v1/healthcare-professionals/applications")
         .set("Cookie", `token=${jobSeekerToken}`)
         .expect(200);
 
       expect(applicationsResponse.body.applications).toHaveLength(1);
       expect(applicationsResponse.body.applications[0].status).toBe("applied");
 
-      // Verify that the employer can get stats of applications on their own jobs
+      // Verify that the clinic can get stats of applications on their own jobs
       const statsResponse = await request(app)
-        .get("/api/v1/employers/app-stats")
+        .get("/api/v1/clinics/app-stats")
         .set("Cookie", `token=${authToken}`)
         .expect(200);
 
@@ -269,7 +268,7 @@ describe("API Integration Tests", () => {
   describe("Error Handling", () => {
     it("should handle unauthorized access", async () => {
       const response = await request(app)
-        .get("/api/v1/employers/current-user")
+        .get("/api/v1/clinics/current-user")
         .expect(401);
 
       expect(response.body.msg).toBe("Authentication invalid");

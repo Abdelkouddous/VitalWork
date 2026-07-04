@@ -2,24 +2,26 @@ import "express-async-errors";
 import request from "supertest";
 import express from "express";
 import mongoose from "mongoose";
-import jobSeekerRouter from "../../backend/routes/jobSeekerRouter.js";
-import JobSeeker from "../../backend/models/JobSeekerModel.js";
+import healthCareProfessionalRouter from "../../apps/api-v1-community/routes/healthCareProfessionalRouter.js";
+import User from "../../apps/api-v1-community/models/UserModel.js";
+import HealthCareProfessionalProfile from "../../apps/api-v1-community/models/HealthCareProfessionalProfileModel.js";
+import ClinicProfile from "../../apps/api-v1-community/models/ClinicProfileModel.js";
 import { testUsers } from "../fixtures/testData.js";
 import cookieParser from "cookie-parser";
-import errorHandlerMiddleware from "../../backend/middleware/errorHandlerMiddleware.js";
+import errorHandlerMiddleware from "../../apps/api-v1-community/middleware/errorHandlerMiddleware.js";
 
 // Create test app
 const app = express();
 app.use(cookieParser());
 app.use(express.json());
-app.use("/api/v1/jobseekers", jobSeekerRouter);
+app.use("/api/v1/healthcare-professionals", healthCareProfessionalRouter);
 app.use(errorHandlerMiddleware);
 
-describe("Job Seeker Controller", () => {
-  describe("POST /api/v1/jobseekers/register", () => {
-    it("should register a new job seeker successfully", async () => {
+describe("Healthcare Professional Controller", () => {
+  describe("POST /api/v1/healthcare-professionals/register", () => {
+    it("should register a new Healthcare Professional successfully", async () => {
       const response = await request(app)
-        .post("/api/v1/jobseekers/register")
+        .post("/api/v1/healthcare-professionals/register")
         .send(testUsers.jobSeeker)
         .expect(201);
 
@@ -29,11 +31,11 @@ describe("Job Seeker Controller", () => {
 
     it("should hash password before saving", async () => {
       await request(app)
-        .post("/api/v1/jobseekers/register")
+        .post("/api/v1/healthcare-professionals/register")
         .send(testUsers.jobSeeker)
         .expect(201);
 
-      const user = await JobSeeker.findOne({ email: testUsers.jobSeeker.email });
+      const user = await User.findOne({ email: testUsers.jobSeeker.email }).select("+password");
       expect(user.password).not.toBe(testUsers.jobSeeker.password);
       expect(user.password).toMatch(/^\$2[aby]\$\d+\$/); // bcrypt hash pattern
     });
@@ -41,17 +43,17 @@ describe("Job Seeker Controller", () => {
     it("should return error for duplicate email", async () => {
       // Register first user
       await request(app)
-        .post("/api/v1/jobseekers/register")
+        .post("/api/v1/healthcare-professionals/register")
         .send(testUsers.jobSeeker)
         .expect(201);
 
       // Try to register with same email
       const response = await request(app)
-        .post("/api/v1/jobseekers/register")
+        .post("/api/v1/healthcare-professionals/register")
         .send(testUsers.jobSeeker)
         .expect(400);
 
-      expect(response.body.message).toBe("Job seeker already exists");
+      expect(response.body.message).toBe("User already exists");
     });
 
     it("should return error for missing email or password", async () => {
@@ -60,7 +62,7 @@ describe("Job Seeker Controller", () => {
       };
 
       const response = await request(app)
-        .post("/api/v1/jobseekers/register")
+        .post("/api/v1/healthcare-professionals/register")
         .send(incompleteUser)
         .expect(400);
 
@@ -68,29 +70,29 @@ describe("Job Seeker Controller", () => {
     });
   });
 
-  describe("POST /api/v1/jobseekers/login", () => {
+  describe("POST /api/v1/healthcare-professionals/login", () => {
     beforeEach(async () => {
       // Register a user and confirm their email before each login test
-      const res = await request(app).post("/api/v1/jobseekers/register").send(testUsers.jobSeeker);
-      await JobSeeker.findByIdAndUpdate(res.body.userId, { isConfirmed: true });
+      const res = await request(app).post("/api/v1/healthcare-professionals/register").send(testUsers.jobSeeker);
+      await User.findByIdAndUpdate(res.body.userId, { isConfirmed: true });
     });
 
     it("should login with valid credentials", async () => {
       const response = await request(app)
-        .post("/api/v1/jobseekers/login")
+        .post("/api/v1/healthcare-professionals/login")
         .send({
           email: testUsers.jobSeeker.email,
           password: testUsers.jobSeeker.password,
         })
         .expect(200);
 
-      expect(response.body.jobSeeker.email).toBe(testUsers.jobSeeker.email);
+      expect(response.body.healthcareProfessional.email).toBe(testUsers.jobSeeker.email);
       expect(response.body.token).toBeDefined();
     });
 
     it("should set httpOnly cookie on successful login", async () => {
       const response = await request(app)
-        .post("/api/v1/jobseekers/login")
+        .post("/api/v1/healthcare-professionals/login")
         .send({
           email: testUsers.jobSeeker.email,
           password: testUsers.jobSeeker.password,
@@ -105,31 +107,31 @@ describe("Job Seeker Controller", () => {
 
     it("should return error for invalid email", async () => {
       const response = await request(app)
-        .post("/api/v1/jobseekers/login")
+        .post("/api/v1/healthcare-professionals/login")
         .send({
           email: "nonexistent@example.com",
           password: testUsers.jobSeeker.password,
         })
-        .expect(400);
+        .expect(401);
 
       expect(response.body.message).toBe("Invalid credentials");
     });
 
     it("should return error for invalid password", async () => {
       const response = await request(app)
-        .post("/api/v1/jobseekers/login")
+        .post("/api/v1/healthcare-professionals/login")
         .send({
           email: testUsers.jobSeeker.email,
           password: "wrongpassword",
         })
-        .expect(400);
+        .expect(401);
 
       expect(response.body.message).toBe("Invalid credentials");
     });
 
     it("should return error for missing credentials", async () => {
       const response = await request(app)
-        .post("/api/v1/jobseekers/login")
+        .post("/api/v1/healthcare-professionals/login")
         .send({})
         .expect(400);
 
@@ -137,10 +139,10 @@ describe("Job Seeker Controller", () => {
     });
   });
 
-  describe("POST /api/v1/jobseekers/forgot-password", () => {
+  describe("POST /api/v1/healthcare-professionals/forgot-password", () => {
     beforeEach(async () => {
-      const res = await request(app).post("/api/v1/jobseekers/register").send(testUsers.jobSeeker);
-      await JobSeeker.findByIdAndUpdate(res.body.userId, { isConfirmed: true });
+      const res = await request(app).post("/api/v1/healthcare-professionals/register").send(testUsers.jobSeeker);
+      await User.findByIdAndUpdate(res.body.userId, { isConfirmed: true });
     });
 
     it("should request reset OTP and return OTP in development", async () => {
@@ -148,11 +150,11 @@ describe("Job Seeker Controller", () => {
       process.env.NODE_ENV = "development";
 
       const response = await request(app)
-        .post("/api/v1/jobseekers/forgot-password")
+        .post("/api/v1/healthcare-professionals/forgot-password")
         .send({ email: testUsers.jobSeeker.email })
         .expect(200);
 
-      expect(response.body.message).toContain("a reset OTP has been sent");
+      expect(response.body.message).toContain("Reset OTP sent successfully");
       expect(response.body.devOtp).toBeDefined();
 
       process.env.NODE_ENV = originalEnv;
@@ -160,7 +162,7 @@ describe("Job Seeker Controller", () => {
 
     it("should return the same success message even if email is not registered", async () => {
       const response = await request(app)
-        .post("/api/v1/jobseekers/forgot-password")
+        .post("/api/v1/healthcare-professionals/forgot-password")
         .send({ email: "unregistered@example.com" })
         .expect(200);
 
@@ -169,17 +171,17 @@ describe("Job Seeker Controller", () => {
     });
   });
 
-  describe("POST /api/v1/jobseekers/reset-password", () => {
+  describe("POST /api/v1/healthcare-professionals/reset-password", () => {
     let devOtp;
     beforeEach(async () => {
-      const res = await request(app).post("/api/v1/jobseekers/register").send(testUsers.jobSeeker);
-      await JobSeeker.findByIdAndUpdate(res.body.userId, { isConfirmed: true });
+      const res = await request(app).post("/api/v1/healthcare-professionals/register").send(testUsers.jobSeeker);
+      await User.findByIdAndUpdate(res.body.userId, { isConfirmed: true });
       
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = "development";
 
       const response = await request(app)
-        .post("/api/v1/jobseekers/forgot-password")
+        .post("/api/v1/healthcare-professionals/forgot-password")
         .send({ email: testUsers.jobSeeker.email });
       
       devOtp = response.body.devOtp;
@@ -188,7 +190,7 @@ describe("Job Seeker Controller", () => {
 
     it("should reset password successfully with valid OTP", async () => {
       const response = await request(app)
-        .post("/api/v1/jobseekers/reset-password")
+        .post("/api/v1/healthcare-professionals/reset-password")
         .send({
           email: testUsers.jobSeeker.email,
           otp: devOtp,
@@ -196,11 +198,11 @@ describe("Job Seeker Controller", () => {
         })
         .expect(200);
 
-      expect(response.body.message).toBe("Password reset successful");
+      expect(response.body.message).toBe("Password reset successfully");
 
       // Verify login works with the new password
       await request(app)
-        .post("/api/v1/jobseekers/login")
+        .post("/api/v1/healthcare-professionals/login")
         .send({
           email: testUsers.jobSeeker.email,
           password: "brandNewPassword123"
@@ -210,7 +212,7 @@ describe("Job Seeker Controller", () => {
 
     it("should reject invalid OTP", async () => {
       const response = await request(app)
-        .post("/api/v1/jobseekers/reset-password")
+        .post("/api/v1/healthcare-professionals/reset-password")
         .send({
           email: testUsers.jobSeeker.email,
           otp: "wrongOTP",
@@ -218,18 +220,20 @@ describe("Job Seeker Controller", () => {
         })
         .expect(400);
 
-      expect(response.body.message).toBe("Invalid OTP");
+      expect(response.body.message).toBe("Invalid or expired OTP");
     });
   });
 
-  describe("POST /api/v1/jobseekers/become-recruiter", () => {
+  describe("POST /api/v1/healthcare-professionals/become-recruiter", () => {
     let tokenCookie;
+    let userId;
     beforeEach(async () => {
-      const res = await request(app).post("/api/v1/jobseekers/register").send(testUsers.jobSeeker);
-      await JobSeeker.findByIdAndUpdate(res.body.userId, { isConfirmed: true });
+      const res = await request(app).post("/api/v1/healthcare-professionals/register").send(testUsers.jobSeeker);
+      userId = res.body.userId;
+      await User.findByIdAndUpdate(userId, { isConfirmed: true });
 
       const loginRes = await request(app)
-        .post("/api/v1/jobseekers/login")
+        .post("/api/v1/healthcare-professionals/login")
         .send({
           email: testUsers.jobSeeker.email,
           password: testUsers.jobSeeker.password,
@@ -237,22 +241,21 @@ describe("Job Seeker Controller", () => {
       tokenCookie = loginRes.headers["set-cookie"];
     });
 
-    it("should successfully transition a job seeker to a recruiter with 1 trial quota", async () => {
+    it("should successfully transition a Healthcare Professional to a clinic recruiter", async () => {
       const response = await request(app)
-        .post("/api/v1/jobseekers/become-recruiter")
+        .post("/api/v1/healthcare-professionals/become-recruiter")
         .set("Cookie", tokenCookie)
         .expect(200);
 
-      expect(response.body.message).toBe("Successfully transitioned to Recruiter mode");
-      expect(response.body.user.role).toBe("employer");
-      expect(response.body.user.jobOffersQuota).toBe(1);
-      expect(response.body.user.trialJobsLimit).toBe(1);
-      expect(response.headers["set-cookie"]).toBeDefined();
+      expect(response.body.message).toBe("Role converted to Clinic successfully");
+      
+      const dbUser = await User.findById(userId);
+      expect(dbUser.role).toBe("clinic");
     });
 
     it("should fail if not authenticated", async () => {
       await request(app)
-        .post("/api/v1/jobseekers/become-recruiter")
+        .post("/api/v1/healthcare-professionals/become-recruiter")
         .expect(401);
     });
   });

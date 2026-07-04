@@ -1,0 +1,402 @@
+# =============================================================================
+# VitalWork — Automated Code Review Workflow
+# =============================================================================
+#
+# This workflow runs an automated code review on every pull request targeting
+# main or develop. It performs static analysis, custom guardrail checks, and
+# posts findings as PR review comments.
+#
+# Prerequisites:
+#   - No external API keys required (uses ESLint + custom scripts only)
+#   - For AI-powered review (optional), add GEMINI_API_KEY to repo secrets
+# =============================================================================
+
+name: "🔍 Code Review Agent"
+
+on:
+  pull_request:
+    branches: [main, develop]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: code-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  # ===========================================================================
+  # Phase 1: Static Analysis & Linting
+  # ===========================================================================
+  lint-check:
+    name: "📋 Lint & Style Check"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install client dependencies
+        run: cd client && npm ci
+
+      - name: Run backend linting
+        id: backend-lint
+        continue-on-error: true
+        run: |
+          echo "## Backend Lint Results" >> $GITHUB_STEP_SUMMARY
+          npx eslint backend/ --format json --output-file backend-lint.json 2>/dev/null || true
+          npx eslint backend/ 2>&1 | tee backend-lint.txt || true
+          if [ -s backend-lint.txt ]; then
+            echo "::warning::Backend lint issues found"
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat backend-lint.txt >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "has_issues=true" >> $GITHUB_OUTPUT
+          else
+            echo "✅ No backend lint issues" >> $GITHUB_STEP_SUMMARY
+            echo "has_issues=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run frontend linting
+        id: frontend-lint
+        continue-on-error: true
+        run: |
+          echo "## Frontend Lint Results" >> $GITHUB_STEP_SUMMARY
+          cd client && npx eslint src/ 2>&1 | tee ../frontend-lint.txt || true
+          cd ..
+          if [ -s frontend-lint.txt ]; then
+            echo "::warning::Frontend lint issues found"
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            cat frontend-lint.txt >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "has_issues=true" >> $GITHUB_OUTPUT
+          else
+            echo "✅ No frontend lint issues" >> $GITHUB_STEP_SUMMARY
+            echo "has_issues=false" >> $GITHUB_OUTPUT
+          fi
+
+  # ===========================================================================
+  # Phase 2: Engineering Guardrail Checks (Custom)
+  # ===========================================================================
+  guardrail-checks:
+    name: "🛡️ Engineering Guardrails"
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed-files
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE_SHA=${{ github.event.pull_request.base.sha }}
+            HEAD_SHA=${{ github.event.pull_request.head.sha }}
+          else
+            BASE_SHA=${{ github.event.before }}
+            HEAD_SHA=${{ github.sha }}
+          fi
+          
+          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMRT "$BASE_SHA" "$HEAD_SHA" | grep -E '\.(js|jsx|mjs|cjs|ts|tsx)$' || true)
+          echo "files<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGED_FILES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          
+          FILE_COUNT=$(echo "$CHANGED_FILES" | grep -c '.' || echo "0")
+          echo "count=$FILE_COUNT" >> $GITHUB_OUTPUT
+          echo "### Changed Files ($FILE_COUNT)" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "$CHANGED_FILES" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: "💰 Integer Money Guard"
+        if: steps.changed-files.outputs.count != '0'
+        run: |
+          echo "## 💰 Integer Money Guard" >> $GITHUB_STEP_SUMMARY
+          VIOLATIONS=""
+          
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            [ ! -f "$file" ] && continue
+            
+            # Flag floating-point patterns in monetary contexts
+            MONEY_VIOLATIONS=$(grep -n -i -E '(price|cost|amount|balance|salary|wage|fee|payment|total|subtotal|discount|revenue|income|budget)\s*[:=]\s*(parseFloat|Number\(|0\.\d|[0-9]+\.[0-9])' "$file" 2>/dev/null || true)
+            
+            SCHEMA_VIOLATIONS=$(grep -n -E 'type:\s*(Number|Float|Decimal|Double)' "$file" 2>/dev/null | grep -i -E '(price|cost|amount|balance|salary|wage|fee|payment)' || true)
+            
+            if [ -n "$MONEY_VIOLATIONS" ] || [ -n "$SCHEMA_VIOLATIONS" ]; then
+              VIOLATIONS="$VIOLATIONS\n🔴 **$file:**\n"
+              [ -n "$MONEY_VIOLATIONS" ] && VIOLATIONS="$VIOLATIONS$MONEY_VIOLATIONS\n"
+              [ -n "$SCHEMA_VIOLATIONS" ] && VIOLATIONS="$VIOLATIONS$SCHEMA_VIOLATIONS\n"
+            fi
+          done <<< "${{ steps.changed-files.outputs.files }}"
+          
+          if [ -n "$VIOLATIONS" ]; then
+            echo "::error::Integer Money Guard violations detected"
+            echo -e "$VIOLATIONS" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "> **Rule:** All monetary values must use integer cents/centimes (e.g., \`price_cents: 1500\` not \`price: 15.00\`)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ No floating-point currency violations detected" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: "🔑 UUID Sharding Guard"
+        if: steps.changed-files.outputs.count != '0'
+        run: |
+          echo "## 🔑 UUID Sharding Guard" >> $GITHUB_STEP_SUMMARY
+          VIOLATIONS=""
+          
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            [ ! -f "$file" ] && continue
+            
+            # Flag auto-increment patterns
+            AUTO_INC=$(grep -n -E '(autoIncrement|auto_increment|SERIAL|BIGSERIAL|AUTO_INCREMENT|\.counter\(\)|sequenceValue)' "$file" 2>/dev/null || true)
+            
+            if [ -n "$AUTO_INC" ]; then
+              VIOLATIONS="$VIOLATIONS\n🔴 **$file:**\n$AUTO_INC\n"
+            fi
+          done <<< "${{ steps.changed-files.outputs.files }}"
+          
+          if [ -n "$VIOLATIONS" ]; then
+            echo "::error::UUID Sharding Guard violations detected"
+            echo -e "$VIOLATIONS" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "> **Rule:** All primary/foreign keys must use UUIDs, not auto-incrementing integers." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ No auto-increment ID violations detected" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: "🔒 Security Scan"
+        if: steps.changed-files.outputs.count != '0'
+        run: |
+          echo "## 🔒 Security Scan" >> $GITHUB_STEP_SUMMARY
+          VIOLATIONS=""
+          EXIT_CODE=0
+          
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            [ ! -f "$file" ] && continue
+            
+            # Check for hardcoded secrets
+            SECRETS=$(grep -n -E '(password|secret|api_key|apikey|token|private_key)\s*[:=]\s*["\x27][^"'\'']{8,}["\x27]' "$file" 2>/dev/null | grep -v -E '(process\.env|test|mock|fake|example|placeholder|TODO|FIXME)' || true)
+            
+            # Check for wildcard CORS
+            CORS=$(grep -n -E "origin:\s*['\"]?\*['\"]?" "$file" 2>/dev/null || true)
+            
+            # Check for NoSQL injection vectors
+            NOSQL=$(grep -n -E '\$where|\$regex.*req\.(body|query|params)' "$file" 2>/dev/null || true)
+            
+            # Check for eval or Function constructor
+            EVAL=$(grep -n -E '(^|[^a-zA-Z])(eval\s*\(|new\s+Function\s*\()' "$file" 2>/dev/null || true)
+            
+            if [ -n "$SECRETS" ]; then
+              VIOLATIONS="$VIOLATIONS\n🔴 **Hardcoded Secret in \`$file\`:**\n\`\`\`\n$SECRETS\n\`\`\`\n"
+              EXIT_CODE=1
+            fi
+            
+            if [ -n "$CORS" ]; then
+              VIOLATIONS="$VIOLATIONS\n🟡 **Wildcard CORS in \`$file\`:**\n\`\`\`\n$CORS\n\`\`\`\n"
+            fi
+            
+            if [ -n "$NOSQL" ]; then
+              VIOLATIONS="$VIOLATIONS\n🔴 **Potential NoSQL Injection in \`$file\`:**\n\`\`\`\n$NOSQL\n\`\`\`\n"
+              EXIT_CODE=1
+            fi
+            
+            if [ -n "$EVAL" ]; then
+              VIOLATIONS="$VIOLATIONS\n🔴 **Dangerous eval/Function in \`$file\`:**\n\`\`\`\n$EVAL\n\`\`\`\n"
+              EXIT_CODE=1
+            fi
+          done <<< "${{ steps.changed-files.outputs.files }}"
+          
+          if [ -n "$VIOLATIONS" ]; then
+            echo -e "$VIOLATIONS" >> $GITHUB_STEP_SUMMARY
+            if [ $EXIT_CODE -ne 0 ]; then
+              echo "::error::Critical security vulnerabilities detected"
+            fi
+          else
+            echo "✅ No security issues detected in changed files" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Only fail on critical security issues (hardcoded secrets, injection, eval)
+          exit $EXIT_CODE
+
+      - name: "🏗️ Architecture Check"
+        if: steps.changed-files.outputs.count != '0'
+        run: |
+          echo "## 🏗️ Architecture Check" >> $GITHUB_STEP_SUMMARY
+          WARNINGS=""
+          
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            [ ! -f "$file" ] && continue
+            
+            # Check for direct mongoose imports in controllers (DIP violation)
+            if echo "$file" | grep -q "controllers/"; then
+              MONGOOSE_IMPORT=$(grep -n -E "^import.*from\s+['\"]mongoose['\"]" "$file" 2>/dev/null || true)
+              if [ -n "$MONGOOSE_IMPORT" ]; then
+                WARNINGS="$WARNINGS\n🟡 **DIP Violation in \`$file\`:** Controller directly imports \`mongoose\`. Controllers should depend on model abstractions, not the database driver.\n\`\`\`\n$MONGOOSE_IMPORT\n\`\`\`\n"
+              fi
+            fi
+            
+            # Check for overly large functions (>80 lines)
+            if echo "$file" | grep -q -E "\.(js|jsx|ts|tsx)$"; then
+              FUNC_LENGTHS=$(awk '
+                /^(export\s+)?(const|let|var|function|async\s+function)\s+\w+/ { 
+                  fname=$0; start=NR; depth=0 
+                }
+                /{/ { depth++ }
+                /}/ { 
+                  depth--; 
+                  if (depth==0 && start>0) { 
+                    len=NR-start; 
+                    if (len>80) print "Line " start ": function is " len " lines long"
+                    start=0 
+                  } 
+                }
+              ' "$file" 2>/dev/null || true)
+              
+              if [ -n "$FUNC_LENGTHS" ]; then
+                WARNINGS="$WARNINGS\n🟡 **Large Function in \`$file\`:**\n$FUNC_LENGTHS\nConsider extracting into smaller, focused functions.\n"
+              fi
+            fi
+            
+            # Check for console.log in non-dev-guarded code
+            if echo "$file" | grep -q -v "test\|spec\|__tests__\|setup"; then
+              CONSOLE_LOGS=$(grep -n "console\.log" "$file" 2>/dev/null | grep -v "NODE_ENV\|development\|debug\|test" || true)
+              CONSOLE_COUNT=$(echo "$CONSOLE_LOGS" | grep -c '.' 2>/dev/null || echo "0")
+              if [ "$CONSOLE_COUNT" -gt 3 ]; then
+                WARNINGS="$WARNINGS\n🔵 **Console Pollution in \`$file\`:** $CONSOLE_COUNT unguarded \`console.log\` statements found. Consider using a structured logger.\n"
+              fi
+            fi
+          done <<< "${{ steps.changed-files.outputs.files }}"
+          
+          if [ -n "$WARNINGS" ]; then
+            echo -e "$WARNINGS" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ No architecture concerns detected" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: "🧪 Test Coverage Check"
+        if: steps.changed-files.outputs.count != '0'
+        run: |
+          echo "## 🧪 Test Coverage Check" >> $GITHUB_STEP_SUMMARY
+          WARNINGS=""
+          
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            [ ! -f "$file" ] && continue
+            
+            # Only check backend controllers and middleware
+            if echo "$file" | grep -q "backend/controllers/"; then
+              CONTROLLER_NAME=$(basename "$file" .js)
+              
+              # Search for corresponding test file
+              TEST_EXISTS=$(find tests/ -name "*${CONTROLLER_NAME}*" -o -name "*$(echo "$CONTROLLER_NAME" | sed 's/Controller//')*" 2>/dev/null | head -1)
+              
+              if [ -z "$TEST_EXISTS" ]; then
+                WARNINGS="$WARNINGS\n🟡 **Missing Tests for \`$file\`:** No corresponding test file found in \`tests/\`.\n"
+              fi
+            fi
+            
+            if echo "$file" | grep -q "backend/middleware/"; then
+              MW_NAME=$(basename "$file" .js)
+              TEST_EXISTS=$(find tests/ -name "*${MW_NAME}*" 2>/dev/null | head -1)
+              
+              if [ -z "$TEST_EXISTS" ]; then
+                WARNINGS="$WARNINGS\n🟡 **Missing Tests for \`$file\`:** No corresponding test file found in \`tests/\`.\n"
+              fi
+            fi
+          done <<< "${{ steps.changed-files.outputs.files }}"
+          
+          if [ -n "$WARNINGS" ]; then
+            echo -e "$WARNINGS" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ All changed source files have corresponding tests" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # ===========================================================================
+  # Phase 3: Post Review Summary as PR Comment
+  # ===========================================================================
+  post-review:
+    name: "📝 Post Review Summary"
+    runs-on: ubuntu-latest
+    needs: [lint-check, guardrail-checks]
+    if: always()
+
+    steps:
+      - name: Post PR comment with review summary
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const pr_number = context.payload.pull_request.number;
+
+            // Collect job statuses
+            const lintStatus = '${{ needs.lint-check.result }}';
+            const guardrailStatus = '${{ needs.guardrail-checks.result }}';
+
+            const statusEmoji = (s) => s === 'success' ? '✅' : s === 'failure' ? '❌' : '⚠️';
+
+            const overallStatus = (lintStatus === 'success' && guardrailStatus === 'success')
+              ? '✅ **APPROVED** — All checks passed'
+              : (guardrailStatus === 'failure')
+                ? '❌ **CHANGES REQUESTED** — Critical guardrail violations detected'
+                : '⚠️ **NEEDS ATTENTION** — Some checks require review';
+
+            const body = [
+              '## 🔍 Code Review Agent Report',
+              '',
+              `**PR:** #${pr_number}`,
+              `**Commit:** \`${context.sha.substring(0, 7)}\``,
+              `**Reviewed at:** ${new Date().toISOString()}`,
+              '',
+              '---',
+              '',
+              '### Check Results',
+              '',
+              `| Check | Status |`,
+              `|-------|--------|`,
+              `| 📋 Lint & Style | ${statusEmoji(lintStatus)} ${lintStatus} |`,
+              `| 🛡️ Engineering Guardrails | ${statusEmoji(guardrailStatus)} ${guardrailStatus} |`,
+              '',
+              '---',
+              '',
+              `### Verdict: ${overallStatus}`,
+              '',
+              '> 📋 **Details:** See the [Actions run summary](https://github.com/' + owner + '/' + repo + '/actions/runs/' + context.runId + ') for full findings.',
+              '',
+              '---',
+              '*🤖 Automated by VitalWork Code Review Agent*',
+            ].join('\n');
+
+            // Find existing bot comment to update (avoid spam)
+            const comments = await github.rest.issues.listComments({
+              owner, repo, issue_number: pr_number
+            });
+
+            const botComment = comments.data.find(
+              c => c.body?.includes('🔍 Code Review Agent Report') && c.user?.type === 'Bot'
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner, repo, comment_id: botComment.id, body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: pr_number, body
+              });
+            }

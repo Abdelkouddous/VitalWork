@@ -1,11 +1,11 @@
 import request from "supertest";
 import express from "express";
 import mongoose from "mongoose";
-import authRouter from "../../backend/routes/authRouter.js";
-import Employer from "../../backend/models/EmployerModel.js";
+import authRouter from "../../apps/api-v1-community/routes/authRouter.js";
+import User from "../../apps/api-v1-community/models/UserModel.js";
 import { testUsers } from "../fixtures/testData.js";
 import cookieParser from "cookie-parser";
-import errorHandlerMiddleware from "../../backend/middleware/errorHandlerMiddleware.js";
+import errorHandlerMiddleware from "../../apps/api-v1-community/middleware/errorHandlerMiddleware.js";
 
 // Create test app
 const app = express();
@@ -34,7 +34,7 @@ describe("Authentication Controller", () => {
         .expect(201);
 
       // Check if user was created as admin
-      const user = await Employer.findOne({ email: testUsers.admin.email });
+      const user = await User.findOne({ email: testUsers.admin.email });
       expect(user.role).toBe("admin");
     });
 
@@ -44,7 +44,7 @@ describe("Authentication Controller", () => {
         .send(testUsers.employer)
         .expect(201);
 
-      const user = await Employer.findOne({ email: testUsers.employer.email });
+      const user = await User.findOne({ email: testUsers.employer.email }).select("+password");
       expect(user.password).not.toBe(testUsers.employer.password);
       expect(user.password).toMatch(/^\$2[aby]\$\d+\$/); // bcrypt hash pattern
     });
@@ -84,7 +84,7 @@ describe("Authentication Controller", () => {
     beforeEach(async () => {
       // Register a user and confirm their email before each login test
       const res = await request(app).post("/api/v1/auth/register").send(testUsers.employer);
-      await Employer.findByIdAndUpdate(res.body.user.userId, { isConfirmed: true });
+      await User.findByIdAndUpdate(res.body.user.userId, { isConfirmed: true });
     });
 
     it("should login with valid credentials", async () => {
@@ -220,7 +220,7 @@ describe("Authentication Controller", () => {
     let devOtp;
     beforeEach(async () => {
       const res = await request(app).post("/api/v1/auth/register").send(testUsers.employer);
-      await Employer.findByIdAndUpdate(res.body.user.userId, { isConfirmed: true });
+      await User.findByIdAndUpdate(res.body.user.userId, { isConfirmed: true });
       
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = "development";

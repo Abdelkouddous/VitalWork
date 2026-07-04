@@ -1,8 +1,9 @@
 import request from "supertest";
 import mongoose from "mongoose";
-import Employer from "../../backend/models/EmployerModel.js";
-import Job from "../../backend/models/JobModel.js";
-import JobSeeker from "../../backend/models/JobSeekerModel.js";
+import User from "../../apps/api-v1-community/models/UserModel.js";
+import ClinicProfile from "../../apps/api-v1-community/models/ClinicProfileModel.js";
+import HealthCareProfessionalProfile from "../../apps/api-v1-community/models/HealthCareProfessionalProfileModel.js";
+import Job from "../../apps/api-v1-community/models/JobModel.js";
 import { testUsers, testJobs } from "../fixtures/testData.js";
 
 /**
@@ -15,8 +16,30 @@ export class TestUtils {
   static async createAuthenticatedUser(userType = "employer") {
     const userData = testUsers[userType];
 
-    // Create user
-    const user = await Employer.create(userData);
+    // In our system, all accounts are created via User model
+    const user = await User.create({
+      ...userData,
+      isConfirmed: true,
+    });
+
+    // Create the associated profile document
+    if (user.role === "clinic" || user.role === "admin") {
+      await ClinicProfile.create({
+        _id: user._id,
+        name: userData.name,
+        hospitalName: userData.hospitalName || "Test Clinic",
+        location: userData.location,
+        status: "approved",
+      });
+    } else if (user.role === "healthcareprofessional") {
+      await HealthCareProfessionalProfile.create({
+        _id: user._id,
+        name: userData.name,
+        lastName: userData.lastName,
+        specialization: userData.specialty,
+        location: userData.location,
+      });
+    }
 
     // Login to get token
     const loginResponse = await request(global.app)
@@ -45,20 +68,32 @@ export class TestUtils {
   }
 
   /**
-   * Create a test job seeker
+   * Create a test Healthcare Professional
    */
   static async createTestJobSeeker(jobSeekerData = testUsers.jobSeeker) {
-    const jobSeeker = await JobSeeker.create(jobSeekerData);
-    return jobSeeker;
+    const user = await User.create({
+      ...jobSeekerData,
+      role: "healthcareprofessional",
+      isConfirmed: true,
+    });
+    const profile = await HealthCareProfessionalProfile.create({
+      _id: user._id,
+      name: jobSeekerData.name,
+      lastName: jobSeekerData.lastName,
+      specialization: jobSeekerData.specialty,
+      location: jobSeekerData.location,
+    });
+    return { ...user.toObject(), ...profile.toObject() };
   }
 
   /**
    * Clean up test data
    */
   static async cleanupTestData() {
-    await Employer.deleteMany({});
+    await User.deleteMany({});
+    await ClinicProfile.deleteMany({});
+    await HealthCareProfessionalProfile.deleteMany({});
     await Job.deleteMany({});
-    await JobSeeker.deleteMany({});
   }
 
   /**
@@ -216,15 +251,47 @@ export class DatabaseUtils {
    * Seed test data
    */
   static async seedTestData() {
-    const users = await Employer.insertMany(
-      TestUtils.generateBulkTestData("users", 5)
-    );
+    // Seed Clinics
+    const rawClinics = TestUtils.generateBulkTestData("users", 5);
+    const users = [];
+    for (const data of rawClinics) {
+      const user = await User.create(data);
+      await ClinicProfile.create({
+        _id: user._id,
+        name: data.name,
+        hospitalName: "Hospital " + data.name,
+        location: data.location,
+        status: "approved",
+      });
+      users.push(user);
+    }
+
+    // Seed Jobs
     const jobs = await Job.insertMany(
-      TestUtils.generateBulkTestData("jobs", 10)
+      TestUtils.generateBulkTestData("jobs", 10).map((job, idx) => ({
+        ...job,
+        createdBy: users[idx % users.length]._id,
+      }))
     );
-    const jobSeekers = await JobSeeker.insertMany(
-      TestUtils.generateBulkTestData("jobSeekers", 5)
-    );
+
+    // Seed HCPs
+    const rawHCPs = TestUtils.generateBulkTestData("jobSeekers", 5);
+    const jobSeekers = [];
+    for (const data of rawHCPs) {
+      const user = await User.create({
+        ...data,
+        role: "healthcareprofessional",
+        isConfirmed: true,
+      });
+      const profile = await HealthCareProfessionalProfile.create({
+        _id: user._id,
+        name: data.name,
+        lastName: data.lastName,
+        specialization: data.specialty,
+        location: data.location,
+      });
+      jobSeekers.push({ ...user.toObject(), ...profile.toObject() });
+    }
 
     return { users, jobs, jobSeekers };
   }

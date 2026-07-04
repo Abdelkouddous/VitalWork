@@ -54,12 +54,12 @@ async function captureScreens() {
   await desktopPage.waitForTimeout(1000);
   await desktopPage.screenshot({ path: getPath("raw_forgot_password_employer.png") });
 
-  console.log("4. Capturing Job Seeker Login Page (Desktop)...");
+  console.log("4. Capturing Healthcare Professional Login Page (Desktop)...");
   await desktopPage.goto(`${BASE_URL}/job-seekers/login`);
   await desktopPage.waitForTimeout(1000);
   await desktopPage.screenshot({ path: getPath("raw_login_seeker.png") });
 
-  console.log("5. Capturing Job Seeker Forgot Password Page (Desktop)...");
+  console.log("5. Capturing Healthcare Professional Forgot Password Page (Desktop)...");
   await desktopPage.goto(`${BASE_URL}/job-seekers/forgot-password`);
   await desktopPage.waitForTimeout(1000);
   await desktopPage.screenshot({ path: getPath("raw_forgot_password_seeker.png") });
@@ -124,8 +124,8 @@ async function captureScreens() {
   await desktopPage.goto(`${BASE_URL}/`);
   await desktopContext.clearCookies();
 
-  // --- Authenticate Job Seeker ---
-  console.log("Authenticating Job Seeker...");
+  // --- Authenticate Healthcare Professional ---
+  console.log("Authenticating Healthcare Professional...");
   await desktopPage.goto(`${BASE_URL}/job-seekers/login`);
   await desktopPage.fill('input[name="email"]', "test.jobseeker@example.com");
   await desktopPage.fill('input[name="password"]', "password123");
@@ -133,9 +133,9 @@ async function captureScreens() {
 
   try {
     await desktopPage.waitForURL(url => url.pathname.startsWith('/job-seekers') && !url.pathname.includes('/login'), { timeout: 5000 });
-    console.log("Login successful! Redirected to Job Seeker Dashboard.");
+    console.log("Login successful! Redirected to Healthcare Professional Dashboard.");
   } catch (err) {
-    console.log("Job Seeker login failed or timed out. Attempting to register new test seeker...");
+    console.log("Healthcare Professional login failed or timed out. Attempting to register new test seeker...");
     await desktopPage.goto(`${BASE_URL}/job-seekers/register`);
     await desktopPage.fill('input[name="name"]', "Dr. Portfolio");
     await desktopPage.fill('input[name="lastName"]', "JobSeeker");
@@ -157,7 +157,7 @@ async function captureScreens() {
     await activateUserInDb("test.jobseeker@example.com", "jobseekers");
 
     // Login
-    console.log("Logging in as newly registered/activated Job Seeker...");
+    console.log("Logging in as newly registered/activated Healthcare Professional...");
     await desktopPage.goto(`${BASE_URL}/job-seekers/login`);
     await desktopPage.fill('input[name="email"]', "test.jobseeker@example.com");
     await desktopPage.fill('input[name="password"]', "password123");
@@ -165,21 +165,21 @@ async function captureScreens() {
     await desktopPage.waitForURL(url => url.pathname.startsWith('/job-seekers') && !url.pathname.includes('/login'), { timeout: 8000 });
   }
 
-  console.log("9. Capturing Job Seeker Dashboard (Desktop)...");
+  console.log("9. Capturing Healthcare Professional Dashboard (Desktop)...");
   await desktopPage.waitForTimeout(2000);
   await desktopPage.screenshot({ path: getPath("raw_seeker_dashboard.png") });
 
-  console.log("10. Capturing Job Seeker Profile (Desktop)...");
+  console.log("10. Capturing Healthcare Professional Profile (Desktop)...");
   await desktopPage.goto(`${BASE_URL}/job-seekers/profile`);
   await desktopPage.waitForTimeout(2000);
   await desktopPage.screenshot({ path: getPath("raw_seeker_profile.png") });
 
-  console.log("11. Capturing Job Seeker Jobs Page (Desktop)...");
+  console.log("11. Capturing Healthcare Professional Jobs Page (Desktop)...");
   await desktopPage.goto(`${BASE_URL}/job-seekers/jobs`);
   await desktopPage.waitForTimeout(2000);
   await desktopPage.screenshot({ path: getPath("raw_seeker_jobs.png") });
 
-  console.log("12. Capturing Job Seeker Inbox Page (Desktop)...");
+  console.log("12. Capturing Healthcare Professional Inbox Page (Desktop)...");
   await desktopPage.goto(`${BASE_URL}/job-seekers/inbox`);
   await desktopPage.waitForTimeout(2000);
   await desktopPage.screenshot({ path: getPath("raw_seeker_inbox.png") });
@@ -202,7 +202,7 @@ async function captureScreens() {
   await mobilePage.waitForTimeout(2000);
   await mobilePage.screenshot({ path: getPath("raw_landing_mobile.png") });
 
-  console.log("14. Capturing Job Seeker Login (Mobile)...");
+  console.log("14. Capturing Healthcare Professional Login (Mobile)...");
   await mobilePage.goto(`${BASE_URL}/job-seekers/login`);
   await mobilePage.waitForTimeout(1000);
   await mobilePage.screenshot({ path: getPath("raw_login_seeker_mobile.png") });

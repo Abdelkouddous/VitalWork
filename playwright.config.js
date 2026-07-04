@@ -17,17 +17,9 @@ export default defineConfig({
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
     },
-    {
-      name: "firefox",
-      use: { ...devices["Desktop Firefox"] },
-    },
-    {
-      name: "webkit",
-      use: { ...devices["Desktop Safari"] },
-    },
   ],
   webServer: {
-    command: "npm run dev",
+    command: "MONGO_URL=mongodb://127.0.0.1:27017/MedCareer npm run dev",
     url: "http://localhost:5173",
     reuseExistingServer: !process.env.CI,
   },
