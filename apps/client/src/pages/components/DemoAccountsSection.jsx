@@ -53,7 +53,7 @@ const DEMO_ACCOUNTS = [
   },
 ];
 
-const DemoAccountsSection = () => {
+const DemoAccountsSection = ({ onSelectAccount }) => {
   const navigate = useNavigate();
   const [loadingRole, setLoadingRole] = useState(null);
   const [copiedField, setCopiedField] = useState(null);
@@ -66,6 +66,11 @@ const DemoAccountsSection = () => {
   };
 
   const handleInstantLogin = async (account) => {
+    if (onSelectAccount) {
+      onSelectAccount(account);
+      return;
+    }
+
     setLoadingRole(account.roleId);
     try {
       // Try primary email first
@@ -101,6 +106,10 @@ const DemoAccountsSection = () => {
   };
 
   const handleOpenInWizard = (account) => {
+    if (onSelectAccount) {
+      onSelectAccount(account);
+      return;
+    }
     navigate(`${account.wizardLoginPath}?email=${encodeURIComponent(account.email)}&autofill=1`);
   };
 

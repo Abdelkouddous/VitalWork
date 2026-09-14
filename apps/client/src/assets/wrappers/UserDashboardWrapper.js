@@ -299,6 +299,121 @@ const Wrapper = styled.div`
     }
   }
 
+  /* ── Pipeline & Compatibility Analytics Card ── */
+  .analytics-card {
+    background: var(--surface-primary, var(--background-secondary-color));
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-1);
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+
+    .analytics-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .analytics-title {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--text-color);
+      margin: 0;
+    }
+
+    .analytics-subtitle {
+      font-size: 0.75rem;
+      color: var(--text-secondary-color);
+      margin: 0.25rem 0 0 0;
+    }
+
+    .analytics-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.25rem;
+
+      @media (min-width: 768px) {
+        grid-template-columns: 1.4fr 1fr;
+      }
+    }
+
+    .compatibility-box {
+      background: var(--surface-secondary, #f8fafc);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .compatibility-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+
+    .compatibility-score {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--primary-500);
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 10px;
+      border-radius: 9999px;
+      background: var(--border-color, #e2e8f0);
+      overflow: hidden;
+      margin-bottom: 0.5rem;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 9999px;
+      background: linear-gradient(90deg, var(--primary-500) 0%, #0d9488 100%);
+      transition: width 0.6s ease;
+    }
+
+    .pipeline-summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+    }
+
+    .pipeline-item {
+      background: var(--surface-secondary, #f8fafc);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 0.85rem 0.5rem;
+      text-align: center;
+    }
+
+    .pipeline-num {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--text-color);
+      margin: 0;
+
+      &.teal { color: var(--primary-500); }
+      &.purple { color: #8b5cf6; }
+      &.green { color: #10b981; }
+      &.amber { color: #f59e0b; }
+    }
+
+    .pipeline-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text-secondary-color);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin: 0.25rem 0 0 0;
+    }
+  }
+
   /* ── Recent Applications Card & Table ── */
   .table-card {
     background: var(--surface-primary, var(--background-secondary-color));

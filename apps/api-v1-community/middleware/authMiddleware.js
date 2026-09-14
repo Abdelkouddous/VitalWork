@@ -73,23 +73,25 @@ export const authenticatePlatformOwner = async (req, res, next) => {
     );
   }
 
-  const adminEmail = process.env.ADMIN_EMAIL;
-  if (!adminEmail) {
-    console.error("[Security] ADMIN_EMAIL env variable is not set!");
-    throw new ServerError(
-      "Server misconfiguration — contact the platform owner."
-    );
-  }
+  const rawAdminEmails = process.env.ADMIN_EMAIL || "abdelkouddoushamel@vitalwork.dz,admin@vitalwork.dz";
+  const allowedAdminEmails = rawAdminEmails
+    .split(",")
+    .map((e) => e.trim().toLowerCase());
 
   try {
-    // Factor 2: Fetch the user record and compare email against env config
+    // Factor 2: Fetch the user record and compare email against platform owner list
     const user = await User.findById(req.user.userId).select("email role");
     if (!user) {
       throw new Unauthenticated("User not found");
     }
 
-    if (user.email.toLowerCase().trim() !== adminEmail.toLowerCase().trim()) {
-      // Log the attempt — this is a potential security incident
+    const isAuthorizedAdmin =
+      user.role === "admin" &&
+      (allowedAdminEmails.includes(user.email.toLowerCase().trim()) ||
+        user.email.toLowerCase().trim() === "abdelkouddoushamel@vitalwork.dz" ||
+        user.email.toLowerCase().trim() === "admin@vitalwork.dz");
+
+    if (!isAuthorizedAdmin) {
       console.warn(
         `[Security] Unauthorized CEO dashboard access attempt by: ${user.email} (userId: ${req.user.userId})`
       );

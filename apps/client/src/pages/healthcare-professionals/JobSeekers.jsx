@@ -29,7 +29,6 @@ const JobSeekers = () => {
     {text: "Dashboard", path: "/healthcare-professionals/dashboard", icon: <Home />},
     { text: "Jobs", path: "/healthcare-professionals/jobs", icon: <Work /> },
     { text: "Applications", path: "/healthcare-professionals/applications", icon: <Assignment /> },
-    { text: "Stats", path: "/healthcare-professionals/stats", icon: <BarChart /> },
     { text: "Inbox", path: "/healthcare-professionals/inbox", icon: <Email /> },
     { text: "My CV", path: "/healthcare-professionals/cv-template", icon: <Description /> },
     { text: "Profile", path: "/healthcare-professionals/profile", icon: <Person /> },

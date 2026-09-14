@@ -204,7 +204,7 @@ const router = createBrowserRouter([
       { index: true, element: <ClinicDashboard /> },
       {
         path: "stats",
-        element: <Stats></Stats>,
+        element: <ClinicDashboard />,
       },
       {
         path: "all-jobs",
@@ -302,7 +302,7 @@ const router = createBrowserRouter([
       // Nested routes (relative to /healthcare-professionals)
       { path: "dashboard", element: <Dashboard /> },
       { path: "jobs", element: <JobsJobSeeker /> },
-      { path: "stats", element: <StatsJobSeeker /> },
+      { path: "stats", element: <Dashboard /> },
       { path: "inbox", element: <InboxJobSeeker /> },
       { path: "applications", element: <ApplicationsJobSeeker /> },
       { path: "profile", element: <ProfileJobSeeker /> },

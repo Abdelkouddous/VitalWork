@@ -27,11 +27,6 @@ const links = [
     icon: <ImProfile />,
   },
   {
-    text: "stats",
-    path: "stats",
-    icon: <IoBarChartSharp />,
-  },
-  {
     text: "profile",
     path: "profile",
     icon: <ImProfile />,

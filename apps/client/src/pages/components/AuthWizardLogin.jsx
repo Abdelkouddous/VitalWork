@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 import { FiShield, FiPlusCircle, FiUserCheck, FiEye, FiEyeOff, FiMail, FiLock, FiArrowRight, FiArrowLeft, FiZap } from "react-icons/fi";
 import Wrapper from "../../assets/wrappers/RegisterAndLoginPage";
 import customFetch from "../../utils/customFetch";
+import DemoAccountsSection from "./DemoAccountsSection";
 
 const ROLE_CONFIGS = {
   clinic: {
@@ -426,6 +427,22 @@ const AuthWizardLogin = ({ defaultRole = "clinic" }) => {
             </p>
           </div>
         )}
+      </div>
+
+      {/* Test Accounts Sandbox Selector */}
+      <div className="w-full max-w-5xl mx-auto mt-10">
+        <DemoAccountsSection
+          onSelectAccount={(acc) => {
+            setActiveRole(acc.roleId);
+            setForm({
+              email: acc.email,
+              password: acc.password,
+            });
+            setStep(2);
+            toast.info(`Loaded ${acc.roleName} test credentials`);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+        />
       </div>
     </Wrapper>
   );

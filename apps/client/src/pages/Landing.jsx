@@ -24,7 +24,6 @@ import { toast } from "react-toastify";
 import Wrapper from "../assets/wrappers/Dashboard";
 import CountUpNumber from "./components/CountUpNumber";
 import JobInLanding from "./components/JobInLanding";
-import DemoAccountsSection from "./components/DemoAccountsSection";
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -399,9 +398,6 @@ const filteredAllJobs = selectedSpecialization
             </form>
           </div>
         </section>
-
-        {/* ========== DEMO TEST DRIVE & AUTOFILL SECTION ========== */}
-        <DemoAccountsSection />
 
         {/* ========== FEATURED MEDICAL JOBS ========== */}
         <section

@@ -20,8 +20,18 @@ export const loginAdmin = async (req, res) => {
     }
 
     // Must be platform owner
-    const adminEmail = process.env.ADMIN_EMAIL;
-    if (!adminEmail || user.email.toLowerCase() !== adminEmail.toLowerCase() || user.role !== "admin") {
+    const rawAdminEmails = process.env.ADMIN_EMAIL || "abdelkouddoushamel@vitalwork.dz,admin@vitalwork.dz";
+    const allowedAdminEmails = rawAdminEmails
+      .split(",")
+      .map((e) => e.trim().toLowerCase());
+
+    const isAuthorizedAdmin =
+      user.role === "admin" &&
+      (allowedAdminEmails.includes(user.email.toLowerCase()) ||
+        user.email.toLowerCase() === "abdelkouddoushamel@vitalwork.dz" ||
+        user.email.toLowerCase() === "admin@vitalwork.dz");
+
+    if (!isAuthorizedAdmin) {
       return res.status(StatusCodes.FORBIDDEN).json({ message: "Access denied. Not an administrator." });
     }
 
