@@ -32,6 +32,5 @@ coverage/
 # Local metadata and scratch directories
 .claude/
 .gemini/
-.github/
 .agents/
 code_overhaul_diff.txt

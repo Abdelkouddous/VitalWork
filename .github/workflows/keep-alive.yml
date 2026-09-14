@@ -1,0 +1,22 @@
+name: Production Keep-Alive Liveness Heartbeat
+
+on:
+  schedule:
+    # Runs every 12 minutes to prevent Render free-tier container sleep (15m inactivity threshold)
+    - cron: '*/12 * * * *'
+  workflow_dispatch:
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping VitalWork Production Endpoint
+        run: |
+          echo "Dispatching synthetic liveness heartbeat..."
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 25 "https://medcareer.onrender.com/api/v1/health" || echo "FAILED")
+          echo "Upstream medcareer.onrender.com response: $RESPONSE"
+          
+          # Ping custom domain if configured
+          CUSTOM_RESP=$(curl -s -o /dev/null -w "%{http_code}" --max-time 25 "https://vitalwork.aymenhamel.com/api/v1/health" || echo "STANDBY")
+          echo "Custom domain vitalwork.aymenhamel.com response: $CUSTOM_RESP"
