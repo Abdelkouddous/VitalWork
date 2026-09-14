@@ -109,24 +109,33 @@ const Wrapper = styled.section`
     position: relative;
     flex: 1;
 
-    svg {
+    svg,
+    .search-icon {
       position: absolute;
-      left: 1rem;
+      left: 1.15rem;
       top: 50%;
       transform: translateY(-50%);
-      color: var(--text-secondary-color, #94a3b8);
-      font-size: 1.2rem;
+      color: var(--primary-500, #00c2a8);
+      font-size: 1.35rem;
+      pointer-events: none;
+      z-index: 5;
     }
 
     input {
       width: 100%;
-      padding: 0.75rem 1rem 0.75rem 2.85rem;
-      border-radius: 10px;
+      box-sizing: border-box;
+      padding: 0.9rem 1.25rem 0.9rem 3.5rem !important;
+      border-radius: 12px;
       border: 1px solid var(--border-color, #cbd5e1);
       background: var(--background-secondary-color, #f8fafc);
       color: var(--text-color, #0f172a);
       font-size: 0.95rem;
       transition: all 0.2s ease;
+
+      &::placeholder {
+        color: var(--text-secondary-color, #94a3b8);
+        opacity: 0.85;
+      }
 
       &:focus {
         outline: none;
@@ -368,7 +377,7 @@ const Wrapper = styled.section`
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
-    margin: 0.75rem 0 0.75rem 4rem;
+    margin: 0.5rem 0;
   }
 
   .specialty-pill {
@@ -390,12 +399,16 @@ const Wrapper = styled.section`
   }
 
   .job-snippet {
-    margin: 0 0 0 4rem;
+    margin: 0.65rem 0 0 0;
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    background: var(--background-secondary-color, #f8fafc);
+    border: 1px solid var(--border-color, #f1f5f9);
     font-size: 0.88rem;
-    line-height: 1.5;
+    line-height: 1.55;
     color: var(--text-secondary-color, #475569);
     display: -webkit-box;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }

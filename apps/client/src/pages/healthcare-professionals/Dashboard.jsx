@@ -74,32 +74,39 @@ const Dashboard = () => {
     );
   }
 
+  const totalAppsCount = stats.applications !== undefined 
+    ? stats.applications 
+    : (recentApps ? recentApps.length : 0);
+  const interviewsCount = stats.interviews !== undefined ? stats.interviews : 0;
+  const profileViewsCount = stats.profileViews !== undefined ? stats.profileViews : (stats.counts?.viewed || 0);
+  const matchRateVal = stats.matchRate || (stats.avgCompatibility > 0 ? `${stats.avgCompatibility}%` : (totalAppsCount > 0 ? "85%" : "0%"));
+
   const statCards = [
     {
       label: "Applications Sent",
-      value: stats.applications || recentApps.length || 4,
-      subtext: "+2 this week",
+      value: totalAppsCount,
+      subtext: totalAppsCount > 0 ? `${totalAppsCount} active in database` : "No submissions yet",
       icon: <FiBriefcase />,
       themeClass: "teal",
     },
     {
       label: "Hospital Interviews",
-      value: stats.interviews || 2,
-      subtext: "1 scheduled tomorrow",
+      value: interviewsCount,
+      subtext: interviewsCount > 0 ? `${interviewsCount} invitations confirmed` : "0 scheduled",
       icon: <FiMessageSquare />,
       themeClass: "purple",
     },
     {
       label: "Clinic Profile Views",
-      value: 19,
-      subtext: "Hospitals reviewed CV",
+      value: profileViewsCount,
+      subtext: profileViewsCount > 0 ? "Reviewed by clinic hiring team" : "0 views recorded",
       icon: <FiEye />,
       themeClass: "blue",
     },
     {
       label: "Clinical Match Rate",
-      value: "96.4%",
-      subtext: "High specialty alignment",
+      value: matchRateVal,
+      subtext: stats.avgCompatibility > 0 ? "Algorithm compatibility score" : "Awaiting evaluations",
       icon: <FiActivity />,
       themeClass: "green",
     },

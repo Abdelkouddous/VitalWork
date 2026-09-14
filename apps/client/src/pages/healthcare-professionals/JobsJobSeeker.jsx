@@ -108,6 +108,20 @@ function JobsJobSeeker() {
     return "Negotiable";
   };
 
+  // Provide detailed clinical description for every job
+  const getJobDescription = (job) => {
+    if (job.notes && job.notes.trim()) {
+      return job.notes;
+    }
+    if (job.description && job.description.trim()) {
+      return job.description;
+    }
+    const spec = job.specialization || "Clinical Specialist";
+    const loc = job.jobLocation || "Algeria";
+    const comp = job.company || "Healthcare Facility";
+    return `Seeking a certified ${spec} to provide inpatient consultations, specialized diagnosis, comprehensive patient care, and clinical department duties at ${comp} in ${loc}. Requires Algerian Medical Council licensure.`;
+  };
+
   // Submit clinical application
   const apply = async (jobId) => {
     if (appliedJobIds.has(jobId)) {
@@ -249,7 +263,7 @@ function JobsJobSeeker() {
         <div className="search-card">
           <div className="search-row">
             <div className="search-input-wrapper">
-              <FiSearch />
+              <FiSearch className="search-icon" />
               <input
                 type="text"
                 placeholder="Search by position title, hospital, or specialty..."
@@ -403,9 +417,7 @@ function JobsJobSeeker() {
                           )}
                         </div>
 
-                        {job.notes && (
-                          <p className="job-snippet">{job.notes}</p>
-                        )}
+                        <p className="job-snippet">{getJobDescription(job)}</p>
                       </div>
 
                       {/* Right-aligned Actions & Remuneration */}

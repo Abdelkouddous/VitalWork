@@ -60,7 +60,7 @@ function StatsJobSeeker() {
   const statCards = [
     {
       title: "Applied",
-      value: counts.applied | "No applied jobs",
+      value: counts?.applied || 0,
       icon: Assignment,
       color: "bg-[var(--primary-100)] text-[var(--primary-700)]",
       iconBg: "bg-[var(--primary-500)]",
