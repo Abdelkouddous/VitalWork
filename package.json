@@ -21,7 +21,8 @@
     "client": "cd apps/client && npm run dev",
     "dev": "concurrently --kill-others-on-fail \" npm run server\" \" npm run client\"",
     "dev:local": "MONGO_URL=mongodb://127.0.0.1:27017/MedCareer npm run dev",
-    "seed:local": "MONGO_URL=mongodb://127.0.0.1:27017/MedCareer node apps/api-v1-community/seed.js"
+    "seed:local": "MONGO_URL=mongodb://127.0.0.1:27017/MedCareer node apps/api-v1-community/seed.js",
+    "seed:demo": "node -r dotenv/config apps/api-v1-community/seedDemoAccounts.js"
   },
   "keywords": [],
   "author": "",

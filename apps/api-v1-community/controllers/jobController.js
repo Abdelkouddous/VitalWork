@@ -283,10 +283,10 @@ export const showStats = async (req, res) => {
     let monthlyApplications;
 
     if (userId) {
-      // If user is authenticated, get their specific stats
+      // If user is authenticated, get their specific stats (using UUID string match)
       stats = await Job.aggregate([
         // Getting all the jobs of the specific user
-        { $match: { createdBy: new mongoose.Types.ObjectId(userId) } },
+        { $match: { createdBy: String(userId) } },
         {
           $group: {
             _id: "$jobStatus",
@@ -294,15 +294,10 @@ export const showStats = async (req, res) => {
           },
         },
       ]);
-      // consoleStats = stats.reduce((acc, cur) => {
-      //   acc[cur._id] = cur.count;
-      //   return acc;
-      // }, {});
-      // console.log(consoleStats);
 
       // Get monthly applications for the authenticated user
       monthlyApplications = await Job.aggregate([
-        { $match: { createdBy: new mongoose.Types.ObjectId(userId) } },
+        { $match: { createdBy: String(userId) } },
         {
           $group: {
             _id: {
@@ -343,7 +338,7 @@ export const showStats = async (req, res) => {
 
       // Get total counts
       const totalJobs = await Job.countDocuments({
-        createdBy: new mongoose.Types.ObjectId(userId),
+        createdBy: String(userId),
       });
 
       res.status(StatusCodes.OK).json({

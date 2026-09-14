@@ -31,6 +31,7 @@ import statusRouter from "./routes/statusRouter.js";
 import messageRouter from "./routes/messageRouter.js";
 import cvRouter from "./routes/cvRouter.js";
 import adminRouter from "./routes/adminRouter.js";
+import { seedDemoAccounts } from "./seedDemoAccounts.js";
 
 //middlewares imports
 
@@ -183,6 +184,11 @@ const start = async () => {
   try {
     const connected = await connectDB();
     if (connected) {
+      try {
+        await seedDemoAccounts();
+      } catch (seedErr) {
+        console.warn("Notice: demo accounts check encountered:", seedErr.message);
+      }
       server.listen(port, () => {
         console.log(`Server running on port ${port}...`);
       });

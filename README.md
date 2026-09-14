@@ -391,9 +391,9 @@ For rapid stakeholder evaluation, testing, and continuous auditing, VitalWork pr
 
 | Role | Demo Account Email | Default Password | Capabilities & Access Bounds |
 |---|---|---|---|
-| **Platform Owner / CEO** | `abdelkouddoushamel@vitalwork.dz` *(alt: `admin@vitalwork.com`)* | `password123` | Full access to CEO Command Centre, real-time analytics aggregation, financial MRR projections, system audit logs |
-| **Clinic / Hospital Employer** | `employer1@vitalwork.dz` *(alt: `employer@vitalwork.com`)* | `password123` | Hospital overview dashboard, vacancy posting, applicant pipeline review, candidate CV inspection |
-| **Healthcare Professional (Doctor)** | `seeker1@vitalwork.dz` *(alt: `jobseeker@vitalwork.com`)* | `password123` | National 58-Wilayas job discovery, application tracking pipeline, verified clinical credentials manager |
+| **Platform Owner / CEO** | `abdelkouddoushamel@vitalwork.dz` *(alt: `admin@vitalwork.dz`)* | `password123` | Full access to CEO Command Centre, real-time analytics aggregation, financial MRR projections, system audit logs |
+| **Clinic / Hospital Employer** | `clinic@vitalwork.dz` *(alt: `employer1@vitalwork.dz`)* | `password123` | Hospital overview dashboard, vacancy posting, applicant pipeline review, candidate CV inspection |
+| **Healthcare Professional (Doctor)** | `doctor@vitalwork.dz` *(alt: `seeker1@vitalwork.dz`)* | `password123` | National 58-Wilayas job discovery, application tracking pipeline, verified clinical credentials manager |
 
 ---
 

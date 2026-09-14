@@ -129,10 +129,9 @@ export const listNotifications = async (req, res) => {
       return res.status(StatusCodes.OK).json({ notifications: [] });
     }
 
-    // Unique notifications for this healthcare professional
-    const oId = new mongoose.Types.ObjectId(healthCareProfessionalId);
+    // Unique notifications for this healthcare professional (using UUID string)
     const notifications = await Notification.aggregate([
-      { $match: { recipientHealthCareProfessional: oId } },
+      { $match: { recipientHealthCareProfessional: healthCareProfessionalId } },
       { $sort: { createdAt: -1 } },
       {
         $group: {
