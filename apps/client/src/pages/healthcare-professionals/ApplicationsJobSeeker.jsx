@@ -5,12 +5,14 @@ import Wrapper from "../../assets/wrappers/JobsContainer";
 import day from "dayjs";
 import advancedFormat from "dayjs/plugin/advancedFormat";
 import { Link } from "react-router-dom";
+import JobDetailsModal from "../components/JobDetailsModal";
 
 day.extend(advancedFormat);
 
 const ApplicationsJobSeeker = () => {
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedJob, setSelectedJob] = useState(null);
 
   useEffect(() => {
     fetchApplications();
@@ -118,14 +120,26 @@ const ApplicationsJobSeeker = () => {
               </div>
 
               <footer className="mt-4 pt-4 border-t border-[var(--border-color)] flex justify-end">
-                 <Link to={`/job-details/${app.job._id}`} className="text-primary-500 hover:text-primary-700 font-medium">
+                 <button
+                   type="button"
+                   onClick={() => setSelectedJob(app.job)}
+                   className="text-primary-500 hover:text-primary-700 font-medium bg-transparent border-0 cursor-pointer text-sm"
+                 >
                     View Job Details
-                 </Link>
+                 </button>
               </footer>
             </article>
           );
         })}
       </div>
+
+      {/* LinkedIn-Style Job Details Modal */}
+      <JobDetailsModal
+        job={selectedJob}
+        isOpen={Boolean(selectedJob)}
+        onClose={() => setSelectedJob(null)}
+        isApplied={true}
+      />
     </Wrapper>
   );
 };

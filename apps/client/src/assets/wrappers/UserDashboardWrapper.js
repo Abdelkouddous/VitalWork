@@ -355,6 +355,15 @@ const Wrapper = styled.div`
         border-bottom: 1px solid var(--border-color);
       }
 
+      tr.clickable-row {
+        cursor: pointer;
+        transition: background 0.15s ease;
+
+        &:hover {
+          background: rgba(0, 194, 168, 0.05);
+        }
+      }
+
       td {
         padding: 0.875rem 0;
         border-bottom: 1px solid var(--border-color);

@@ -16,10 +16,12 @@ import {
 import customFetch from "../../utils/customFetch";
 import day from "dayjs";
 import Wrapper from "../../assets/wrappers/UserDashboardWrapper";
+import JobDetailsModal from "../components/JobDetailsModal";
 
 const Dashboard = () => {
   const [jobSeeker, setJobSeeker] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedJob, setSelectedJob] = useState(null);
   const [stats, setStats] = useState({
     applications: 0,
     interviews: 0,
@@ -220,7 +222,12 @@ const Dashboard = () => {
               </thead>
               <tbody>
                 {recentApps.map((app) => (
-                  <tr key={app._id}>
+                  <tr
+                    key={app._id}
+                    className="clickable-row"
+                    onClick={() => app.job && setSelectedJob(app.job)}
+                    title="Click to view clinical details"
+                  >
                     <td><strong>{app.job?.position || "Medical Specialist"}</strong></td>
                     <td className="company-col">{app.job?.company || "Hospital Center"}</td>
                     <td className="date-col">{day(app.createdAt).format("MMM D, YYYY")}</td>
@@ -256,6 +263,14 @@ const Dashboard = () => {
           ))}
         </div>
       </div>
+
+      {/* ── 6. LINKEDIN-STYLE JOB DETAILS MODAL ── */}
+      <JobDetailsModal
+        job={selectedJob}
+        isOpen={Boolean(selectedJob)}
+        onClose={() => setSelectedJob(null)}
+        isApplied={true}
+      />
     </Wrapper>
   );
 };

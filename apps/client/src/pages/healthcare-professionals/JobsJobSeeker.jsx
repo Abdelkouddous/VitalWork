@@ -1,34 +1,47 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import customFetch from "../../utils/customFetch";
 import { toast } from "react-toastify";
 import {
-  Work,
-  LocationOn,
-  Business,
-  Category,
-  Search,
-  FilterList,
-  BookmarkBorder,
-  Bookmark,
-  AccessTime,
-  AttachMoney,
-  TrendingUp,
-} from "@mui/icons-material";
-import { PageWrapper } from "../../assets/wrappers/AllJobsWrapper";
+  FiBriefcase,
+  FiMapPin,
+  FiSearch,
+  FiFilter,
+  FiBookmark,
+  FiClock,
+  FiDollarSign,
+  FiTrendingUp,
+  FiEye,
+  FiCheck,
+} from "react-icons/fi";
+import Wrapper from "../../assets/wrappers/JobSeekerJobsWrapper";
+import JobDetailsModal from "../components/JobDetailsModal";
+import day from "dayjs";
 
+/**
+ * JobsJobSeeker — Clinical Positions Board with LinkedIn-Style Details Modal
+ *
+ * Implements:
+ * - Unified modeling via JobSeekerJobsWrapper (zero inline style dicts).
+ * - LinkedIn-style detail modal enabling comprehensive preview before applying.
+ * - Integer Money Guard compliance (int min_cents to formatted DZD).
+ * - Synchronized application tracking and optimistic application feedback.
+ */
 function JobsJobSeeker() {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [savedJobs, setSavedJobs] = useState(new Set());
+  const [appliedJobIds, setAppliedJobIds] = useState(new Set());
   const [isGuest, setIsGuest] = useState(false);
+  const [selectedJob, setSelectedJob] = useState(null);
+  const [isApplying, setIsApplying] = useState(false);
+
   const [filters, setFilters] = useState({
     jobType: "",
     specialization: "",
     location: "",
   });
-  const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState("newest");
   const [page, setPage] = useState(1);
   const jobsPerPage = 10;
@@ -36,85 +49,124 @@ function JobsJobSeeker() {
   const locationHook = useLocation();
   const navigate = useNavigate();
 
-  const fetchJobs = async () => {
+  // Fetch jobs from REST endpoint
+  const fetchJobs = useCallback(async () => {
     try {
       setLoading(true);
       const params = {};
       if (searchTerm) params.search = searchTerm;
       if (filters.jobType) params.jobType = filters.jobType;
-      if (filters.specialization)
-        params.specialization = filters.specialization;
+      if (filters.specialization) params.specialization = filters.specialization;
       if (filters.location) params.jobLocation = filters.location;
       if (sortBy) params.sort = sortBy;
 
       const res = await customFetch.get("/jobs", { params });
       setJobs(res.data.jobs || []);
     } catch (error) {
-      toast.error(error?.response?.data?.message || "Failed to load jobs");
+      toast.error(error?.response?.data?.message || "Failed to load clinical positions");
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchTerm, filters, sortBy]);
 
-  const apply = async (jobId) => {
-    try {
-      // Check cookie-based auth
-      await customFetch.get("/healthcare-professionals/me");
-      // Authenticated; apply without manual headers
-      await customFetch.post(`/healthcare-professionals/apply/${jobId}`);
-      toast.success("Application sent successfully!");
-    } catch (e) {
-      if (e?.response?.status === 401) {
-        toast.info("Please create an account or log in to apply");
-        navigate("/healthcare-professionals/register");
-      } else {
-        toast.error(e?.response?.data?.message || "Failed to apply");
-      }
-    }
-  };
-
-  const toggleSaveJob = (jobId) => {
-    const newSavedJobs = new Set(savedJobs);
-    if (newSavedJobs.has(jobId)) {
-      newSavedJobs.delete(jobId);
-      toast.info("Job removed from saved");
-    } else {
-      newSavedJobs.add(jobId);
-      toast.success("Job saved for later");
-    }
-    setSavedJobs(newSavedJobs);
-  };
-
-  // Initialize state from URL params on first render or when URL changes
+  // Load existing user applications to display "Applied" state
   useEffect(() => {
-    const params = new URLSearchParams(locationHook.search);
-    const initialSearch = params.get("search") || "";
-    const initialLocation = params.get("jobLocation") || "";
-    const initialSpec = params.get("specialization") || "";
-    const initialJobType = params.get("jobType") || "";
-    const initialSort = params.get("sort") || "newest";
-
-    setSearchTerm(initialSearch);
-    setFilters({
-      jobType: initialJobType,
-      specialization: initialSpec,
-      location: initialLocation,
-    });
-    setSortBy(initialSort);
-  }, [locationHook.search]);
-
-  // Detect guest by attempting cookie-authenticated call
-  useEffect(() => {
-    const checkGuest = async () => {
+    const fetchUserTelemetry = async () => {
       try {
         await customFetch.get("/healthcare-professionals/me");
         setIsGuest(false);
+
+        try {
+          const appRes = await customFetch.get("/healthcare-professionals/applications");
+          const submittedIds = new Set(
+            (appRes.data.applications || []).map((app) => app.job?._id || app.job)
+          );
+          setAppliedJobIds(submittedIds);
+        } catch {
+          // Applications not yet initialized
+        }
       } catch {
         setIsGuest(true);
       }
     };
-    checkGuest();
+    fetchUserTelemetry();
   }, []);
+
+  // Format currency complying with Integer Money Guard
+  const formatSalary = (job) => {
+    if (job.salaryRange?.min_cents) {
+      const minDzd = Math.round(job.salaryRange.min_cents / 100).toLocaleString();
+      if (job.salaryRange?.max_cents) {
+        const maxDzd = Math.round(job.salaryRange.max_cents / 100).toLocaleString();
+        return `${minDzd} - ${maxDzd} DZD`;
+      }
+      return `${minDzd} DZD`;
+    }
+    if (job.salary) {
+      return `${job.salary} DZD`;
+    }
+    return "Negotiable";
+  };
+
+  // Submit clinical application
+  const apply = async (jobId) => {
+    if (appliedJobIds.has(jobId)) {
+      toast.info("You have already submitted an application for this position.");
+      return;
+    }
+
+    try {
+      setIsApplying(true);
+      await customFetch.get("/healthcare-professionals/me");
+      await customFetch.post(`/healthcare-professionals/apply/${jobId}`);
+      
+      setAppliedJobIds((prev) => new Set(prev).add(jobId));
+      toast.success("Application successfully submitted to hospital hiring team!");
+    } catch (e) {
+      if (e?.response?.status === 401) {
+        toast.info("Please sign in or create your medical credentials to apply");
+        navigate("/healthcare-professionals/login");
+      } else {
+        toast.error(e?.response?.data?.message || "Application submission failed");
+      }
+    } finally {
+      setIsApplying(false);
+    }
+  };
+
+  const toggleSaveJob = (jobId) => {
+    setSavedJobs((prev) => {
+      const next = new Set(prev);
+      if (next.has(jobId)) {
+        next.delete(jobId);
+        toast.info("Job removed from saved bookmarks");
+      } else {
+        next.add(jobId);
+        toast.success("Job bookmarked for later review");
+      }
+      return next;
+    });
+  };
+
+  // Sync URL parameters
+  useEffect(() => {
+    const params = new URLSearchParams(locationHook.search);
+    setSearchTerm(params.get("search") || "");
+    setFilters({
+      jobType: params.get("jobType") || "",
+      specialization: params.get("specialization") || "",
+      location: params.get("jobLocation") || "",
+    });
+    setSortBy(params.get("sort") || "newest");
+  }, [locationHook.search]);
+
+  useEffect(() => {
+    fetchJobs();
+  }, [fetchJobs]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, filters, sortBy]);
 
   const clearFilters = () => {
     setFilters({ jobType: "", specialization: "", location: "" });
@@ -122,46 +174,11 @@ function JobsJobSeeker() {
     setSortBy("newest");
   };
 
-  // Sync URL with current filters for shareable/searchable state
-  useEffect(() => {
-    const params = new URLSearchParams();
-    if (searchTerm) params.set("search", searchTerm);
-    if (filters.location) params.set("jobLocation", filters.location);
-    if (filters.jobType) params.set("jobType", filters.jobType);
-    if (filters.specialization)
-      params.set("specialization", filters.specialization);
-    if (sortBy && sortBy !== "newest") params.set("sort", sortBy);
-
-    const targetPath = locationHook.pathname.startsWith("/healthcare-professionals")
-      ? "/healthcare-professionals/jobs"
-      : "/jobs";
-    navigate(
-      {
-        pathname: targetPath,
-        search: params.toString() ? `?${params.toString()}` : "",
-      },
-      { replace: true }
-    );
-  }, [searchTerm, filters, sortBy, locationHook.pathname, navigate]);
-
-  // Fetch jobs from server whenever filters/sort/search change
-  useEffect(() => {
-    fetchJobs();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm, filters, sortBy]);
-
-  // Reset to first page whenever filters/sort/search change
-  useEffect(() => {
-    setPage(1);
-  }, [searchTerm, filters, sortBy]);
-
-  // Get unique values for filter options
-  const uniqueJobTypes = [...new Set(jobs.map((job) => job.jobType))];
+  const uniqueJobTypes = [...new Set(jobs.map((j) => j.jobType).filter(Boolean))];
   const uniqueSpecializations = [
-    ...new Set(jobs.map((job) => job.specialization)),
+    ...new Set(jobs.map((j) => j.specialization).filter(Boolean)),
   ];
 
-  // Pagination calculations
   const totalJobs = jobs.length;
   const numOfPages = Math.ceil(totalJobs / jobsPerPage) || 1;
   const indexOfLastJob = page * jobsPerPage;
@@ -172,38 +189,38 @@ function JobsJobSeeker() {
     if (newPage < 1) newPage = 1;
     if (newPage > numOfPages) newPage = numOfPages;
     setPage(newPage);
-    // Scroll to top of list on page change for better UX
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-64">
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
         <div className="loading"></div>
+        <p className="text-sm font-medium text-[var(--text-secondary-color)]">
+          Loading Clinical Positions Across Algeria...
+        </p>
       </div>
     );
   }
 
   return (
-    <PageWrapper>
-      {/* Guest CTA Banner */}
+    <Wrapper>
+      {/* ── 1. GUEST CTA BANNER ── */}
       {isGuest && (
-        <div
-          className="mb-6 p-4 rounded-xl flex flex-col md:flex-row md:items-center md:justify-between gap-3"
-          style={{ background: "rgba(0,194,168,0.1)", border: "1px solid rgba(0,194,168,0.25)" }}
-        >
-          <p style={{ color: "var(--primary-500)", margin: 0 }}>
-            You can browse jobs without an account. Create an account or log
-            in to apply.
+        <div className="guest-banner">
+          <p className="guest-banner-text">
+            Viewing clinical openings as guest. Log in or create a medical practitioner profile to submit direct applications.
           </p>
-          <div className="flex gap-2">
+          <div className="guest-banner-actions">
             <button
+              type="button"
               className="btn-hipster"
               onClick={() => navigate("/healthcare-professionals/register")}
             >
               Create Account
             </button>
             <button
+              type="button"
               className="btn"
               onClick={() => navigate("/healthcare-professionals/login")}
             >
@@ -213,48 +230,37 @@ function JobsJobSeeker() {
         </div>
       )}
 
-      {/* Header */}
-      <div className="mb-6">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
+      {/* ── 2. PAGE HEADER ── */}
+      <div className="header-section">
+        <div className="header-top">
           <div>
-            <h1 className="text-3xl font-bold mb-2" style={{ color: "var(--text-color)" }}>
-              Find Your Dream Job
-            </h1>
-            <p style={{ color: "var(--text-secondary-color)", margin: 0 }}>
-              Discover opportunities that match your skills and aspirations
+            <h1 className="page-title">Explore Hospital Positions</h1>
+            <p className="page-subtitle">
+              Verified clinical opportunities across public hospital centers and private clinics in all 58 Wilayas
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <TrendingUp style={{ color: "var(--primary-500)" }} />
-            <span className="text-sm" style={{ color: "var(--text-secondary-color)" }}>
-              {jobs.length} jobs available
-            </span>
+          <div className="jobs-counter">
+            <FiTrendingUp />
+            <span>{jobs.length} Positions Available</span>
           </div>
         </div>
 
         {/* Search Bar */}
-        <div
-          className="p-4 rounded-xl"
-          style={{ background: "var(--surface-primary)", border: "1px solid var(--border-color)", boxShadow: "var(--shadow-1)" }}
-        >
-          <div className="flex flex-col lg:flex-row gap-3 items-stretch">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2" style={{ color: "var(--text-secondary-color)" }} />
-                <input
-                  type="text"
-                  placeholder="Search jobs by position, company, or specialization..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="form-input pl-10"
-                />
-              </div>
+        <div className="search-card">
+          <div className="search-row">
+            <div className="search-input-wrapper">
+              <FiSearch />
+              <input
+                type="text"
+                placeholder="Search by position title, hospital, or specialty..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="form-select"
-              style={{ maxWidth: "180px" }}
+              className="sort-select"
             >
               <option value="newest">Newest First</option>
               <option value="oldest">Oldest First</option>
@@ -265,261 +271,245 @@ function JobsJobSeeker() {
         </div>
       </div>
 
-      {/* 2-Column Layout: Filters Sidebar + Jobs Grid */}
-      <div className="flex flex-col lg:flex-row gap-6">
+      {/* ── 3. TWO-COLUMN LAYOUT: SIDEBAR + FEED ── */}
+      <div className="layout-grid">
         {/* Filter Sidebar */}
-        <aside
-          className="lg:w-64 flex-shrink-0"
-        >
-          <div
-            className="glass-card p-5 lg:sticky lg:top-20"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold m-0" style={{ color: "var(--text-color)" }}>
-                <FilterList className="inline mr-2 text-base" style={{ color: "var(--primary-500)" }} />
-                Filters
+        <aside className="sidebar-filter">
+          <div className="filter-box">
+            <div className="filter-header">
+              <h3>
+                <FiFilter /> Filters
               </h3>
-              <button
-                onClick={clearFilters}
-                className="text-xs font-medium"
-                style={{ color: "var(--primary-500)", background: "none", border: "none", cursor: "pointer" }}
-              >
+              <button type="button" onClick={clearFilters}>
                 Clear
               </button>
             </div>
 
-            {/* Job Type */}
-            <div className="mb-4">
-              <label className="text-xs font-medium mb-2 block" style={{ color: "var(--text-secondary-color)" }}>
-                Job Type
-              </label>
+            {/* Job Type Filter */}
+            <div className="filter-group">
+              <label>Contract Type</label>
               <select
                 value={filters.jobType}
                 onChange={(e) => setFilters({ ...filters, jobType: e.target.value })}
-                className="form-select text-sm"
               >
-                <option value="">All Types</option>
+                <option value="">All Contracts</option>
                 {uniqueJobTypes.map((type) => (
-                  <option key={type} value={type}>{type}</option>
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
                 ))}
               </select>
             </div>
 
-            {/* Specialization */}
-            <div className="mb-4">
-              <label className="text-xs font-medium mb-2 block" style={{ color: "var(--text-secondary-color)" }}>
-                Specialization
-              </label>
+            {/* Specialization Filter */}
+            <div className="filter-group">
+              <label>Specialization</label>
               <select
                 value={filters.specialization}
-                onChange={(e) => setFilters({ ...filters, specialization: e.target.value })}
-                className="form-select text-sm"
+                onChange={(e) =>
+                  setFilters({ ...filters, specialization: e.target.value })
+                }
               >
                 <option value="">All Specializations</option>
                 {uniqueSpecializations.map((spec) => (
-                  <option key={spec} value={spec}>{spec}</option>
+                  <option key={spec} value={spec}>
+                    {spec}
+                  </option>
                 ))}
               </select>
             </div>
 
-            {/* Location */}
-            <div className="mb-2">
-              <label className="text-xs font-medium mb-2 block" style={{ color: "var(--text-secondary-color)" }}>
-                Location
-              </label>
+            {/* Wilaya / Location Filter */}
+            <div className="filter-group">
+              <label>Wilaya / Location</label>
               <input
                 type="text"
-                placeholder="Enter location"
+                placeholder="e.g. Algiers, Oran, Setif"
                 value={filters.location}
-                onChange={(e) => setFilters({ ...filters, location: e.target.value })}
-                className="form-input text-sm"
-              />
+                onChange={(e) =>
+                  setFilters({ ...filters, location: e.target.value })
+                }
+              >
+              </input>
             </div>
           </div>
         </aside>
 
-        {/* Jobs Grid */}
-        <div className="flex-1">
+        {/* Jobs Feed */}
+        <div className="jobs-feed">
           {jobs.length === 0 ? (
-            <div className="text-center py-16 glass-card">
-              <Work className="mx-auto mb-4 text-6xl" style={{ color: "var(--text-secondary-color)", opacity: 0.3 }} />
-              <h3 className="text-xl font-semibold mb-2" style={{ color: "var(--text-secondary-color)" }}>
-                No jobs found
-              </h3>
-              <p style={{ color: "var(--text-secondary-color)" }} className="mb-4">
-                {searchTerm || Object.values(filters).some((f) => f)
-                  ? "Try adjusting your search terms or filters"
-                  : "Check back later for new opportunities"}
-              </p>
-              {(searchTerm || Object.values(filters).some((f) => f)) && (
-                <button onClick={clearFilters} className="btn">Clear Filters</button>
-              )}
+            <div className="empty-state">
+              <FiBriefcase />
+              <h3>No Clinical Positions Found</h3>
+              <p>Try adjusting your search criteria or resetting filters.</p>
+              <button type="button" className="btn" onClick={clearFilters}>
+                Reset Search Filters
+              </button>
             </div>
           ) : (
-            <div className="grid gap-4">
-              {currentJobs.map((job) => (
-                <div
-                  key={job._id}
-                  className="glass-card p-5"
-                >
-                  <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-start gap-4 mb-3">
-                        {/* Hospital initial avatar */}
-                        <div
-                          className="w-11 h-11 rounded-xl flex items-center justify-center text-base font-bold flex-shrink-0"
-                          style={{ background: "rgba(0,194,168,0.15)", color: "var(--primary-500)" }}
-                        >
-                          {job.company?.charAt(0)?.toUpperCase() || "C"}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2 mb-1">
-                            <h3 className="text-lg font-bold truncate m-0" style={{ color: "var(--text-color)" }}>
-                              {job.position}
-                            </h3>
-                            <button
-                              onClick={() => toggleSaveJob(job._id)}
-                              className="flex-shrink-0"
-                              style={{ background: "none", border: "none", cursor: "pointer", color: savedJobs.has(job._id) ? "var(--primary-500)" : "var(--text-secondary-color)" }}
-                            >
-                              {savedJobs.has(job._id) ? <Bookmark /> : <BookmarkBorder />}
-                            </button>
-                          </div>
-                          <div className="flex items-center gap-2 mb-2">
-                            <Business className="text-sm" style={{ color: "var(--text-secondary-color)" }} />
-                            <span className="text-sm" style={{ color: "var(--text-secondary-color)" }}>{job.company}</span>
-                            <span style={{ color: "var(--text-secondary-color)" }}>•</span>
-                            <LocationOn className="text-sm" style={{ color: "var(--text-secondary-color)" }} />
-                            <span className="text-sm" style={{ color: "var(--text-secondary-color)" }}>{job.jobLocation || "Remote"}</span>
-                          </div>
-                        </div>
-                      </div>
+            <div className="jobs-list">
+              {currentJobs.map((job) => {
+                const isApplied = appliedJobIds.has(job._id);
+                const isSaved = savedJobs.has(job._id);
 
-                      <div className="flex flex-wrap gap-2 mb-3 ml-15">
-                        <span
-                          className="px-3 py-1 rounded-lg text-xs font-semibold"
-                          style={{ background: "rgba(0,194,168,0.12)", color: "var(--primary-500)" }}
-                        >
-                          {job.specialization}
-                        </span>
-                        <span
-                          className="px-3 py-1 rounded-lg text-xs font-medium"
-                          style={{ background: "var(--surface-secondary)", color: "var(--text-secondary-color)" }}
-                        >
-                          {job.jobType}
-                        </span>
-                        {job.jobCategory && (
-                          <span
-                            className="px-3 py-1 rounded-lg text-xs font-medium flex items-center gap-1"
-                            style={{ background: "var(--surface-secondary)", color: "var(--text-secondary-color)" }}
-                          >
-                            <Category className="text-xs" />
-                            {job.jobCategory}
+                return (
+                  <article
+                    key={job._id}
+                    className="job-card"
+                    onClick={() => setSelectedJob(job)}
+                  >
+                    <div className="job-card-main">
+                      <div className="job-details-col">
+                        <div className="job-top-row">
+                          <div className="hospital-icon-avatar">
+                            {job.company?.charAt(0)?.toUpperCase() || "H"}
+                          </div>
+                          <div className="job-heading-wrap">
+                            <h3 className="job-position">
+                              <span>{job.position}</span>
+                              <button
+                                type="button"
+                                className={`bookmark-btn ${isSaved ? "saved" : ""}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleSaveJob(job._id);
+                                }}
+                                title={isSaved ? "Bookmarked" : "Save Job"}
+                                aria-label="Save Job"
+                              >
+                                <FiBookmark />
+                              </button>
+                            </h3>
+                            <div className="job-hospital-meta">
+                              <span className="hospital-name">{job.company}</span>
+                              <span>•</span>
+                              <span>
+                                <FiMapPin className="inline mr-1" />
+                                {job.jobLocation || "Algiers, Algeria"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="pill-group">
+                          <span className="specialty-pill">
+                            {job.specialization || "General Medicine"}
                           </span>
+                          <span className="type-pill">
+                            {job.jobType || "Full-time"}
+                          </span>
+                          {job.department && (
+                            <span className="type-pill">{job.department}</span>
+                          )}
+                        </div>
+
+                        {job.notes && (
+                          <p className="job-snippet">{job.notes}</p>
                         )}
                       </div>
 
-                      {job.description && (
-                        <p className="text-sm line-clamp-2 leading-relaxed ml-15" style={{ color: "var(--text-secondary-color)", margin: 0 }}>
-                          {job.description}
-                        </p>
-                      )}
-                    </div>
+                      {/* Right-aligned Actions & Remuneration */}
+                      <div className="card-action-col">
+                        <div className="action-btn-group">
+                          <button
+                            type="button"
+                            className="btn-details"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedJob(job);
+                            }}
+                          >
+                            <FiEye /> View Details
+                          </button>
 
-                    <div className="flex flex-row lg:flex-col items-center gap-3 lg:ml-4 lg:min-w-[130px]">
-                      <button
-                        className="btn flex items-center justify-center gap-2 text-sm"
-                        onClick={() => apply(job._id)}
-                        style={{ padding: "0.6rem 1.25rem" }}
-                      >
-                        <Work className="text-sm" />
-                        Apply Now
-                      </button>
-                      <div className="text-center">
-                        <div className="text-xs" style={{ color: "var(--text-secondary-color)" }}>Salary</div>
-                        <div className="text-sm font-semibold flex items-center justify-center gap-1" style={{ color: "var(--text-color)" }}>
-                          <AttachMoney className="text-xs" />
-                          {job.salary || "Negotiable"}
+                          {isApplied ? (
+                            <button
+                              type="button"
+                              className="btn-apply-card applied"
+                              disabled
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <FiCheck /> Applied
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="btn-apply-card"
+                              disabled={isApplying}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                apply(job._id);
+                              }}
+                            >
+                              <FiBriefcase /> Apply
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="card-salary-box">
+                          <span className="card-salary-label">Remuneration</span>
+                          <span className="card-salary-val">
+                            <FiDollarSign /> {formatSalary(job)}
+                          </span>
+                        </div>
+
+                        <div className="card-date-posted">
+                          <FiClock /> {day(job.createdAt).format("MMM D, YYYY")}
                         </div>
                       </div>
-                      <div className="text-xs" style={{ color: "var(--text-secondary-color)" }}>
-                        <AccessTime className="text-xs mr-1" style={{ verticalAlign: "middle" }} />
-                        {new Date(job.createdAt).toLocaleDateString()}
-                      </div>
                     </div>
-                  </div>
-                </div>
-              ))}
+                  </article>
+                );
+              })}
             </div>
           )}
 
           {/* Pagination Controls */}
           {totalJobs > jobsPerPage && (
-            <div className="flex justify-center items-center gap-2 mt-8 flex-wrap">
+            <div className="pagination-container">
               <button
-                className="btn"
+                type="button"
+                className="page-num-btn"
                 onClick={() => changePage(page - 1)}
                 disabled={page === 1}
-                style={{ padding: "0.5rem 1rem", fontSize: "0.85rem" }}
               >
                 Prev
               </button>
               {Array.from({ length: numOfPages }, (_, i) => i + 1).map((p) => (
                 <button
                   key={p}
-                  className="text-sm font-medium px-3 py-1.5 rounded-lg transition-all duration-200"
+                  type="button"
+                  className={`page-num-btn ${p === page ? "active" : ""}`}
                   onClick={() => changePage(p)}
-                  style={{
-                    background: p === page ? "var(--primary-500)" : "transparent",
-                    color: p === page ? "#fff" : "var(--text-secondary-color)",
-                    border: p === page ? "none" : "1px solid var(--border-color)",
-                    cursor: "pointer",
-                  }}
                 >
                   {p}
                 </button>
               ))}
               <button
-                className="btn"
+                type="button"
+                className="page-num-btn"
                 onClick={() => changePage(page + 1)}
                 disabled={page === numOfPages}
-                style={{ padding: "0.5rem 1rem", fontSize: "0.85rem" }}
               >
                 Next
               </button>
             </div>
           )}
-
-          {/* Results Summary */}
-          {totalJobs > 0 && (
-            <div className="mt-6 p-4 glass-card text-center">
-              <p style={{ color: "var(--text-secondary-color)", margin: 0 }}>
-                Showing
-                <span className="font-semibold ml-1" style={{ color: "var(--text-color)" }}>
-                  {totalJobs === 0
-                    ? 0
-                    : `${indexOfFirstJob + 1}-${Math.min(indexOfLastJob, totalJobs)}`}
-                </span>
-                <span className="ml-1">of</span>
-                <span className="font-semibold ml-1" style={{ color: "var(--text-color)" }}>
-                  {totalJobs}
-                </span>
-                {" "}jobs
-                {savedJobs.size > 0 && (
-                  <span className="ml-4">
-                    •{" "}
-                    <span className="font-semibold" style={{ color: "var(--primary-500)" }}>
-                      {savedJobs.size}
-                    </span>{" "}
-                    jobs saved
-                  </span>
-                )}
-              </p>
-            </div>
-          )}
         </div>
       </div>
-    </PageWrapper>
+
+      {/* ── 4. LINKEDIN-STYLE JOB DETAILS MODAL ── */}
+      <JobDetailsModal
+        job={selectedJob}
+        isOpen={Boolean(selectedJob)}
+        onClose={() => setSelectedJob(null)}
+        onApply={apply}
+        isApplied={appliedJobIds.has(selectedJob?._id)}
+        isSaved={savedJobs.has(selectedJob?._id)}
+        onToggleSave={toggleSaveJob}
+        isApplying={isApplying}
+      />
+    </Wrapper>
   );
 }
 
