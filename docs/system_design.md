@@ -325,31 +325,30 @@ classDiagram
 
 ---
 
-## 7. Architect review and improvements
+---
 
-This design is a solid MVP for a recruitment platform, but it should tighten focus and improve security before production.
+## 7. Architect review and improvements (Implemented in v1.2.0)
 
-### Primary recommendations
+The v1.2.0 release resolves critical architectural and UX limitations identified in prior audits:
 
-- **Keep the scope healthcare recruitment only.** Remove any clinic operations language from requirements and system docs.
-- **Standardize JWT payloads** so both employers and candidates use a consistent auth contract.
-- **Validate WebSocket access.** Authenticate socket connections and verify room membership before joining or broadcasting.
-- **Harden the public API surface.** Review public endpoints such as `/api/v1/all-employers`, `/api/v1/all-seekers`, and `/api/v1/all-jobs`.
-- **Clean route fallback logic.** Use a single SPA fallback route and separate API 404 handling to avoid unreachable middleware.
-- **Separate static assets for scale.** Move uploads/static files to Cloudinary/CDN and let API servers focus on data.
-
-### Operational improvements
-
-- Add **rate limiting** and **request validation** on critical endpoints.
-- Use **secure cookies** and enable HTTPS in production.
-- Add **monitoring / logging** around auth failures, DB connectivity, and socket events.
-- Clarify which endpoints are guest-accessible and which require employer or candidate roles.
+1. **Healthcare Domain Purification:** Purged all residual software engineering and general recruitment copy from the presentation layer. Realigned all value propositions to Algerian university hospitals (CHU), polyclinics, and healthcare practitioners across all 58 Wilayas.
+2. **Progressive Disclosure Auth Wizards:**
+   - Auth flows transitioned from monolithic forms to step-validated wizard sliders.
+   - Login: Features a 3-role selector tab (`Clinic`, `Doctor`, `CEO Admin`) and progressive disclosure (`Identity` → `Security`).
+   - Registration: 3-step slider isolating personal identity, clinical specialty jurisdiction, and security credentials.
+3. **Persistent OTP Verification UX:**
+   - Replaced ephemeral, auto-dismissing toast notifications with an accessible, persistent verification label container equipped with 1-click code injection.
+4. **Clinical Executive Dashboard & KPIs:**
+   - Elevated the primary `/dashboard` index route from an empty job creation form to an executive Clinic Dashboard featuring 6 clinical KPIs (*Active Clinical Roles*, *Total Applicants*, *Scheduled Interviews*, *Time-to-Hire*, *Match Fidelity*, *Emergency Roster Coverage*), hiring funnel visualization, and live candidate feed.
+5. **Production Build & SPA Fallback Hardening:**
+   - Removed blocking maintenance stub from the Express root route (`/`) that intercepted SPA delivery in production.
+   - Added standard root `npm run build` and `npm start` commands to enable automated cloud deployments.
 
 ---
 
 ## 8. Recommended future iterations
 
-1. **Mature matching**: replace the placeholder score with a real candidate-job matching algorithm.
-2. **Employer dashboards**: add hiring funnel metrics, time-to-fill, and pipeline analytics.
-3. **Notifications & workflow**: expand communication channels and track candidate stages.
-4. **Scaling**: separate static/CDN, API, and WebSocket services when traffic grows.
+1. **Mature Matching Engine:** Transition from static taxonomy matching to machine learning-assisted semantic match indexing.
+2. **Real-time Clinical Video Consultations:** Integrate WebRTC video streams directly into the candidate review pipeline.
+3. **Microservices Decomposition:** Separate static media CDN, stateless REST API, and WebSocket notification microservices for high-concurrency scale.
+

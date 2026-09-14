@@ -119,49 +119,9 @@ app.use("/api/v1/status", statusRouter);
 app.use("/api/v1/healthcare-professionals", healthCareProfessionalRouter);
 app.use("/api/v1/messages", messageRouter);
 app.use("/api/v1/cv", cvRouter);
-// API
-app.get("/", (req, res) => {
-  res.send(`
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <title>Site Maintenance</title>
-        <style>
-          body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f5f5f5;
-          }
-          .maintenance-container {
-            text-align: center;
-            padding: 2rem;
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-          }
-          h1 {
-            color: #333;
-            margin-bottom: 1rem;
-          }
-          p {
-            color: #666;
-            font-size: 1.1rem;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="maintenance-container">
-          <h1>🛠️ Site Under Maintenance</h1>
-          <p>We're currently updating our systems to serve you better.</p>
-          <p>Please check back soon!</p>
-        </div>
-      </body>
-    </html>
-  `);
+// Health Check endpoint
+app.get("/api/v1/health", (req, res) => {
+  res.status(200).json({ status: "healthy", timestamp: new Date().toISOString() });
 });
 //
 app.get("/api/v1/test", (req, res) => {

@@ -70,6 +70,7 @@ import ConfirmAccountEmployer from "./pages/clinics/ConfirmAccount";
 import { loader as myJobsLoader } from "./pages/clinics/MyJobs";
 import { loader as candidatesLoader } from "./pages/clinics/Candidates";
 import ApplicantGeneratedCV from "./pages/clinics/ApplicantGeneratedCV";
+import ClinicDashboard from "./pages/clinics/ClinicDashboard";
 // Blog loader
 import { blogLoader } from "./pages/loaders/blogLoader";
 
@@ -200,7 +201,7 @@ const router = createBrowserRouter([
     ),
     loader: dashboardLoader,
     children: [
-      { index: true, element: <AddJob />, action: addJobAction },
+      { index: true, element: <ClinicDashboard /> },
       {
         path: "stats",
         element: <Stats></Stats>,

@@ -24,6 +24,7 @@ import { toast } from "react-toastify";
 import Wrapper from "../assets/wrappers/Dashboard";
 import CountUpNumber from "./components/CountUpNumber";
 import JobInLanding from "./components/JobInLanding";
+import DemoAccountsSection from "./components/DemoAccountsSection";
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -399,6 +400,9 @@ const filteredAllJobs = selectedSpecialization
           </div>
         </section>
 
+        {/* ========== DEMO TEST DRIVE & AUTOFILL SECTION ========== */}
+        <DemoAccountsSection />
+
         {/* ========== FEATURED MEDICAL JOBS ========== */}
         <section
           ref={sectionRefs.featuredJobs}
@@ -695,10 +699,7 @@ const filteredAllJobs = selectedSpecialization
                 fontWeight: 300,
               }}
             >
-              Tired of recruiters who think Java is a detergent brand? That HTML
-              is a programming language? Trust your healthcare career to the
-              &apos;VitalWork&apos; community that speaks the same language(s)
-              as you.
+              Tired of generalist recruiters who don&apos;t understand clinical rotations, specialized medical licensing, or hospital ward operations? Trust your medical career to the VitalWork community — Algeria&apos;s specialized healthcare network designed exclusively for doctors, nurses, pharmacists, and medical institutions.
             </p>
             <Link
               to="/contact"
@@ -734,8 +735,8 @@ const filteredAllJobs = selectedSpecialization
                   }}
                 >
                   Enable healthcare professionals — doctors, nurses,
-                  pharmacists, and more — to find the job that matches their
-                  medical specializations and preferred methodologies.
+                  pharmacists, and medical technicians — to find positions that match their
+                  clinical specializations and preferred practice settings across all 58 Wilayas.
                 </p>
                 <p
                   className="text-base leading-relaxed mb-6"
@@ -745,9 +746,7 @@ const filteredAllJobs = selectedSpecialization
                     fontWeight: 300,
                   }}
                 >
-                  We help startups, healthcare service companies and any
-                  organization requiring medical professionals to strengthen
-                  their teams with the best-suited profiles.
+                  We empower university hospital centers (CHU), polyclinics, diagnostic laboratories, private practices, and medical facilities across Algeria to strengthen their clinical teams with certified healthcare talent.
                 </p>
                 <Link
                   to="/clinics"

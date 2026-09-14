@@ -6,8 +6,13 @@ import { MdAdminPanelSettings } from "react-icons/md";
 
 const links = [
   {
+    text: "dashboard",
+    path: "/dashboard",
+    icon: <IoBarChartSharp />,
+  },
+  {
     text: "add job",
-    path: "/dashboard", // naviage to dashboard with /dashboard as if we use dashboard it will link to /dashbarod/dashboard
+    path: "add-job",
     icon: <FaWpforms />,
   },
 
