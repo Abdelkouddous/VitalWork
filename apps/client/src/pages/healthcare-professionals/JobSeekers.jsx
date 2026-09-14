@@ -6,6 +6,7 @@ import customFetch from "../../utils/customFetch";
 import Wrapper from "../../assets/wrappers/Dashboard";
 import { Home } from "lucide-react";
 import ThemeToggle from "../components/ThemeToggle";
+import LogoutContainer from "../components/LogoutContainer";
 
 const JobSeekers = () => {
   const [showSidebar, setShowSidebar] = useState(false);
@@ -157,23 +158,10 @@ const JobSeekers = () => {
             </h2>
           </div>
 
-          {/* New Container for Theme and Logout */}
-          <div className="flex items-center gap-4">
-             {/* Theme Toggle dropdown */}
-             <ThemeToggle />
-
-            {/* Logout Button in Navbar */}
-            <button
-              onClick={handleLogout}
-              className="danger-btn flex items-center gap-2 px-4 py-2"
-              style={{
-                borderRadius: "var(--border-radius)",
-                transition: "var(--transition)",
-              }}
-            >
-              <Logout />
-              <span className="hidden sm:inline">Logout</span>
-            </button>
+          {/* Unified User Bar on the Right */}
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <LogoutContainer user={user} onLogout={handleLogout} roleTitle={user?.specialization || "Doctor"} />
           </div>
         </header>
 

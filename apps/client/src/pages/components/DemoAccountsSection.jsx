@@ -3,14 +3,15 @@ import { useNavigate } from "react-router-dom";
 import { FiShield, FiPlusCircle, FiUserCheck, FiArrowRight, FiCheck, FiCopy, FiZap } from "react-icons/fi";
 import { toast } from "react-toastify";
 import customFetch from "../../utils/customFetch";
+import Wrapper from "../../assets/wrappers/DemoAccountsWrapper";
 
 const DEMO_ACCOUNTS = [
   {
     roleId: "admin",
     roleName: "CEO / Platform Admin",
     badge: "Full System Authority",
-    badgeColor: "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800",
-    icon: <FiShield className="text-2xl text-purple-600 dark:text-purple-400" />,
+    roleClass: "admin",
+    icon: <FiShield />,
     description: "Access high-level clinical metrics, user administration, financial telemetry, and security moderation.",
     email: "abdelkouddoushamel@vitalwork.dz",
     fallbackEmail: "admin@vitalwork.dz",
@@ -24,8 +25,8 @@ const DEMO_ACCOUNTS = [
     roleId: "clinic",
     roleName: "Medical Clinic / Hospital",
     badge: "Verified Healthcare Employer",
-    badgeColor: "bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-800",
-    icon: <FiPlusCircle className="text-2xl text-teal-600 dark:text-teal-400" />,
+    roleClass: "clinic",
+    icon: <FiPlusCircle />,
     description: "Post specialized vacancies (Cardiology, ICU, Surgery), evaluate candidate resumes, and schedule clinical interviews.",
     email: "clinic@vitalwork.dz",
     fallbackEmail: "employer1@vitalwork.dz",
@@ -39,8 +40,8 @@ const DEMO_ACCOUNTS = [
     roleId: "jobseeker",
     roleName: "Healthcare Professional",
     badge: "Licensed Medical Practitioner",
-    badgeColor: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800",
-    icon: <FiUserCheck className="text-2xl text-blue-600 dark:text-blue-400" />,
+    roleClass: "jobseeker",
+    icon: <FiUserCheck />,
     description: "Browse verified hospital positions across all 58 Wilayas, track applications, and manage medical CV credentials.",
     email: "doctor@vitalwork.dz",
     fallbackEmail: "seeker1@vitalwork.dz",
@@ -104,99 +105,86 @@ const DemoAccountsSection = () => {
   };
 
   return (
-    <section className="py-20 px-6 relative overflow-hidden" style={{ background: "var(--background-secondary-color)" }}>
-      <div className="max-w-[1120px] mx-auto">
-        <div className="text-center max-w-2xl mx-auto mb-14">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide uppercase mb-4 border border-teal-500/30 bg-teal-500/10 text-[var(--primary-500)]">
-            <FiZap className="text-sm" />
+    <Wrapper>
+      <div className="inner-container">
+        <div className="section-header">
+          <div className="sandbox-badge">
+            <FiZap />
             Evaluation Sandbox
           </div>
-          <h2 className="text-3xl md:text-4xl font-bold mb-4 tracking-tight" style={{ color: "var(--text-color)" }}>
+          <h2 className="section-title">
             Test Drive VitalWork with Demo Accounts
           </h2>
-          <p className="text-base md:text-lg leading-relaxed font-light" style={{ color: "var(--text-secondary-color)" }}>
+          <p className="section-desc">
             Explore every dimension of our specialized healthcare recruitment platform. Select an account template below to auto-fill credentials and test role-specific features immediately.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="cards-grid">
           {DEMO_ACCOUNTS.map((account) => {
             const isLoading = loadingRole === account.roleId;
 
             return (
-              <div
-                key={account.roleId}
-                className="flex flex-col rounded-2xl p-6 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 relative"
-                style={{
-                  background: "var(--surface-primary)",
-                  border: "1px solid var(--border-color)",
-                }}
-              >
+              <div key={account.roleId} className="demo-card">
                 {/* Role Header */}
-                <div className="flex items-start justify-between mb-4">
-                  <div className="p-3 rounded-xl bg-gray-100 dark:bg-gray-800/80 border border-gray-200/50 dark:border-gray-700/50">
+                <div className="card-top">
+                  <div className={`role-icon-box ${account.roleClass}`}>
                     {account.icon}
                   </div>
-                  <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border ${account.badgeColor}`}>
+                  <span className={`role-badge ${account.roleClass}`}>
                     {account.badge}
                   </span>
                 </div>
 
-                <h3 className="text-xl font-bold mb-2" style={{ color: "var(--text-color)" }}>
+                <h3 className="role-title">
                   {account.roleName}
                 </h3>
-                <p className="text-xs leading-relaxed mb-5" style={{ color: "var(--text-secondary-color)" }}>
+                <p className="role-desc">
                   {account.description}
                 </p>
 
                 {/* Credentials Box */}
-                <div
-                  className="rounded-xl p-3.5 mb-5 space-y-2 border text-xs"
-                  style={{
-                    background: "var(--background-secondary-color)",
-                    borderColor: "var(--border-color)",
-                  }}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[var(--text-secondary-color)] font-medium">Email:</span>
-                    <div className="flex items-center gap-1.5 font-mono text-[var(--text-color)] font-semibold truncate max-w-[180px]">
-                      <span className="truncate" title={account.email}>{account.email}</span>
+                <div className="credentials-box">
+                  <div className="cred-row">
+                    <span className="cred-label">Email:</span>
+                    <div className="cred-value-wrap">
+                      <span title={account.email}>{account.email}</span>
                       <button
                         type="button"
                         onClick={() => handleCopy(account.email, `${account.roleId}-email`)}
-                        className="text-gray-400 hover:text-[var(--primary-500)] p-1 rounded"
+                        className="copy-btn"
                         title="Copy email"
                       >
-                        {copiedField === `${account.roleId}-email` ? <FiCheck className="text-green-500" /> : <FiCopy />}
+                        {copiedField === `${account.roleId}-email` ? <FiCheck /> : <FiCopy />}
                       </button>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between border-t pt-2" style={{ borderColor: "var(--border-color)" }}>
-                    <span className="text-[var(--text-secondary-color)] font-medium">Password:</span>
-                    <div className="flex items-center gap-1.5 font-mono text-[var(--text-color)] font-semibold">
+                  <div className="cred-row divider">
+                    <span className="cred-label">Password:</span>
+                    <div className="cred-value-wrap">
                       <span>{account.password}</span>
                       <button
                         type="button"
                         onClick={() => handleCopy(account.password, `${account.roleId}-pwd`)}
-                        className="text-gray-400 hover:text-[var(--primary-500)] p-1 rounded"
+                        className="copy-btn"
                         title="Copy password"
                       >
-                        {copiedField === `${account.roleId}-pwd` ? <FiCheck className="text-green-500" /> : <FiCopy />}
+                        {copiedField === `${account.roleId}-pwd` ? <FiCheck /> : <FiCopy />}
                       </button>
                     </div>
                   </div>
                 </div>
 
                 {/* Key Features List */}
-                <div className="mb-6 flex-1">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider block mb-2" style={{ color: "var(--text-secondary-color)" }}>
+                <div className="features-wrap">
+                  <span className="features-heading">
                     Key Capabilities:
                   </span>
-                  <ul className="space-y-1.5 text-xs" style={{ color: "var(--text-secondary-color)" }}>
+                  <ul className="features-list">
                     {account.features.map((feat) => (
-                      <li key={feat} className="flex items-center gap-2">
-                        <span className="h-1.5 w-1.5 rounded-full bg-[var(--primary-500)]" />
+                      <li key={feat} className="feature-item">
+                        <span className="dot" />
                         <span>{feat}</span>
                       </li>
                     ))}
@@ -204,19 +192,18 @@ const DemoAccountsSection = () => {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="space-y-2 pt-2 border-t" style={{ borderColor: "var(--border-color)" }}>
+                <div className="actions-box">
                   <button
                     type="button"
                     onClick={() => handleInstantLogin(account)}
                     disabled={isLoading}
-                    className="w-full py-2.5 px-4 rounded-xl text-sm font-semibold text-white flex items-center justify-center gap-2 shadow-sm transition-all duration-200 hover:brightness-110 active:scale-[0.98] disabled:opacity-70 cursor-pointer"
-                    style={{ background: "var(--primary-500)" }}
+                    className="btn-autologin"
                   >
                     {isLoading ? (
-                      <span className="inline-block animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                      <span>Signing in...</span>
                     ) : (
                       <>
-                        <FiZap className="text-sm" />
+                        <FiZap />
                         Auto-Fill & Sign In
                       </>
                     )}
@@ -225,11 +212,10 @@ const DemoAccountsSection = () => {
                   <button
                     type="button"
                     onClick={() => handleOpenInWizard(account)}
-                    className="w-full py-2 px-3 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 transition-colors duration-150 hover:bg-gray-100 dark:hover:bg-gray-800"
-                    style={{ color: "var(--text-secondary-color)" }}
+                    className="btn-wizard"
                   >
                     <span>Inspect in Login Wizard</span>
-                    <FiArrowRight className="text-xs" />
+                    <FiArrowRight />
                   </button>
                 </div>
               </div>
@@ -237,7 +223,7 @@ const DemoAccountsSection = () => {
           })}
         </div>
       </div>
-    </section>
+    </Wrapper>
   );
 };
 
