@@ -8,8 +8,12 @@ import { Unauthenticated, UnauthorizedError, ServerError } from "../errors/custo
 
 // HealthCareProfessional authentication middleware
 export const authenticateHealthCareProfessional = async (req, res, next) => {
-  console.log(req.cookies);
-  const { token } = req.cookies;
+  const authHeader = req.headers.authorization;
+  let token = req.cookies?.token;
+  if (!token && authHeader && authHeader.startsWith("Bearer ")) {
+    token = authHeader.split(" ")[1];
+  }
+
   if (!token) {
     throw new Unauthenticated("Authentication invalid");
   }
@@ -26,8 +30,12 @@ export const authenticateHealthCareProfessional = async (req, res, next) => {
   }
 };
 export const authenticateUser = (req, res, next) => {
-  console.log(req.cookies);
-  const { token } = req.cookies;
+  const authHeader = req.headers.authorization;
+  let token = req.cookies?.token;
+  if (!token && authHeader && authHeader.startsWith("Bearer ")) {
+    token = authHeader.split(" ")[1];
+  }
+
   if (!token) {
     throw new Unauthenticated("Authentication invalid");
   }
@@ -117,14 +125,20 @@ export const authenticatePlatformOwner = async (req, res, next) => {
 
 // Middleware to allow guest access for viewing jobs only
 export const allowGuestForViewing = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  let token = req.cookies?.token;
+  if (!token && authHeader && authHeader.startsWith("Bearer ")) {
+    token = authHeader.split(" ")[1];
+  }
+
   // If no token or invalid token, set as guest
-  if (!req.cookies.token) {
+  if (!token) {
     req.user = { userId: "guest", role: "guest" };
     return next();
   }
 
   try {
-    const { userId, role } = verifyJWT(req.cookies.token);
+    const { userId, role } = verifyJWT(token);
     req.user = { userId, role };
     next();
   } catch (error) {

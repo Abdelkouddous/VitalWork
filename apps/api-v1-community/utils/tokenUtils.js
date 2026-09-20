@@ -14,14 +14,13 @@ export const createHttpOnlyJWT = (res, payload) => {
     expiresIn: process.env.JWT_EXPIRE,
   });
 
+  const cookieExpireDays = parseInt(process.env.JWT_COOKIE_EXPIRE) || 30;
+
   res.cookie("token", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    signed: true,
-    expires: new Date(
-      Date.now() + parseInt(process.env.JWT_COOKIE_EXPIRE) * 24 * 60 * 60 * 1000
-    ),
-    sameSite: "strict",
+    expires: new Date(Date.now() + cookieExpireDays * 24 * 60 * 60 * 1000),
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
   });
 
   return token;

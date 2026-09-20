@@ -40,19 +40,13 @@ const JobSeekers = () => {
 
   const handleLogout = async () => {
     try {
-      // Call the logout endpoint to clear server-side session (cookies)
-      const response = await customFetch.post("/healthcare-professionals/logout");
-
-      if (response.status === 200) {
-        // No localStorage usage; rely on server to clear cookies
-        toast.success("Logged out successfully");
-        navigate("/healthcare-professionals/login", { replace: true });
-      } else {
-        throw new Error("Logout failed");
-      }
+      await customFetch.post("/healthcare-professionals/logout");
     } catch (error) {
-      console.error("Logout error:", error);
-      toast.error("Logout failed. Please try again.");
+      console.warn("Logout error:", error);
+    } finally {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      navigate("/healthcare-professionals/login", { replace: true });
     }
   };
 

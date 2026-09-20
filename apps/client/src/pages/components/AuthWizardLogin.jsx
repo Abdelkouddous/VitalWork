@@ -144,7 +144,12 @@ const AuthWizardLogin = ({ defaultRole = "clinic" }) => {
       }
 
       if (res && (res.status === 200 || res.status === 201)) {
-        toast.success(`Welcome back! Logged into ${currentRole.title}`);
+        if (res.data?.token) {
+          localStorage.setItem("token", res.data.token);
+        }
+        if (res.data?.user) {
+          localStorage.setItem("user", JSON.stringify(res.data.user));
+        }
         navigate(currentRole.destination);
       }
     } catch (err) {
@@ -154,13 +159,11 @@ const AuthWizardLogin = ({ defaultRole = "clinic" }) => {
 
       // Handle unconfirmed email redirection
       if (status === 403 && userId) {
-        toast.info("Please confirm your email before proceeding.");
         navigate(`${currentRole.confirmPath}?token=${userId}`);
         return;
       }
 
       setErrors({ server: msg });
-      toast.error(msg);
     } finally {
       setLoading(false);
     }

@@ -12,12 +12,10 @@ export const loader = async () => {
   try {
     const { data } = await customFetch.get("/clinics/current-user");
     if (data?.user?.role !== "admin") {
-      toast.error("Access Denied: Administrators only.");
       return redirect("/dashboard");
     }
     return data;
   } catch (error) {
-    toast.error("You must be logged in to access the administrator workspace.");
     return redirect("/login");
   }
 };
@@ -35,11 +33,12 @@ const AdminLayout = () => {
   const logoutUser = async () => {
     try {
       await customFetch.get("/auth/logout");
-      navigate("/login", { replace: true });
-      toast.success(`Session ended successfully.`);
     } catch (error) {
-      console.error("Logout error:", error);
-      toast.error("There was an error logging out");
+      console.warn("Logout error:", error);
+    } finally {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      navigate("/login", { replace: true });
     }
   };
 

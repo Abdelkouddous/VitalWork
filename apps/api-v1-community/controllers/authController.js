@@ -90,6 +90,7 @@ export const login = async (req, res, next) => {
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
     });
 
@@ -141,6 +142,7 @@ export const confirmEmailUser = async (req, res, next) => {
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
     });
 

@@ -40,7 +40,8 @@ export const loginAdmin = async (req, res) => {
     res.cookie("token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      expires: new Date(Date.now() + 1000 * 60 * 60 * 24),
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
     });
 
     res.status(StatusCodes.OK).json({
@@ -50,6 +51,7 @@ export const loginAdmin = async (req, res) => {
         email: user.email,
         role: user.role,
       },
+      token,
     });
   } catch (error) {
     console.error(error);

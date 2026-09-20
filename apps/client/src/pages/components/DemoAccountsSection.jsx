@@ -61,7 +61,6 @@ const DemoAccountsSection = ({ onSelectAccount }) => {
   const handleCopy = (text, fieldKey) => {
     navigator.clipboard.writeText(text);
     setCopiedField(fieldKey);
-    toast.info(`Copied ${text} to clipboard`);
     setTimeout(() => setCopiedField(null), 2000);
   };
 
@@ -93,7 +92,12 @@ const DemoAccountsSection = ({ onSelectAccount }) => {
       }
 
       if (res && (res.status === 200 || res.status === 201)) {
-        toast.success(`Welcome to the ${account.roleName} demonstration!`);
+        if (res.data?.token) {
+          localStorage.setItem("token", res.data.token);
+        }
+        if (res.data?.user) {
+          localStorage.setItem("user", JSON.stringify(res.data.user));
+        }
         navigate(account.destinationPath);
       }
     } catch (err) {

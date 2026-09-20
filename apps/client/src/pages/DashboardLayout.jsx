@@ -14,8 +14,7 @@ export const loader = async () => {
     const { data } = await customFetch.get("/clinics/current-user");
     return data;
   } catch (error) {
-    toast.error("You must be logged in to access the dashboard");
-    console.log(error?.data?.msg);
+    console.warn("Clinic auth check failed, redirecting to login:", error?.response?.status);
     return redirect("/login");
   }
 };
@@ -62,11 +61,12 @@ const DashboardLayout = () => {
   const logoutUser = async () => {
     try {
       await customFetch.get("/auth/logout");
-      navigate("/login", { replace: true });
-      toast.success(`See you soon ${user.name}`);
     } catch (error) {
-      console.error("Logout error:", error);
-      toast.error("There was an error logging out");
+      console.warn("Logout error:", error);
+    } finally {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      navigate("/login", { replace: true });
     }
   };
 

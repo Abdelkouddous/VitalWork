@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import { toast } from "react-toastify";
 import customFetch from "../../utils/customFetch";
 import PropTypes from "prop-types";
 
@@ -16,16 +15,8 @@ const ProtectedJobSeekerRoute = ({ children }) => {
         await customFetch.get("/healthcare-professionals/me");
         setIsAuthenticated(true);
       } catch (error) {
-        console.error("Auth check failed:", error);
-        // localStorage.removeItem("jobseeker_user");
+        console.warn("Auth check failed, redirecting to login:", error?.response?.status);
         setIsAuthenticated(false);
-
-        // Show error message only for non-401 errors to avoid spam
-        if (error.response?.status === 401) {
-          toast.error("Session expired. Please log in again.");
-        } else if (error.response?.status !== 401) {
-          toast.error("Authentication check failed. Please log in again.");
-        }
       } finally {
         setIsLoading(false);
       }
