@@ -2,8 +2,8 @@ name: Production Keep-Alive Liveness Heartbeat
 
 on:
   schedule:
-    # Runs every 12 minutes to prevent Render free-tier container sleep (15m inactivity threshold)
-    - cron: '*/12 * * * *'
+    # Runs every 10 minutes to prevent Render free-tier container sleep (15m inactivity threshold)
+    - cron: '*/10 * * * *'
   workflow_dispatch:
 
 jobs:

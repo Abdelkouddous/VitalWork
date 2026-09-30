@@ -32,6 +32,7 @@ import messageRouter from "./routes/messageRouter.js";
 import cvRouter from "./routes/cvRouter.js";
 import adminRouter from "./routes/adminRouter.js";
 import { seedDemoAccounts } from "./seedDemoAccounts.js";
+import { startKeepAliveWorker } from "./utils/keepAlive.js";
 
 //middlewares imports
 
@@ -218,6 +219,7 @@ const start = async () => {
       }
       server.listen(port, () => {
         console.log(`Server running on port ${port}...`);
+        startKeepAliveWorker();
       });
     } else {
       process.exit(1);
